@@ -1,80 +1,40 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { 
   View, 
   Text, 
-  TextInput, 
   TouchableOpacity, 
   StyleSheet, 
   Alert,
-  Dimensions,
-  ActivityIndicator 
+  ScrollView,
+  TextInput
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import MapViewDirections from 'react-native-maps-directions';
-import * as Location from 'expo-location';
+import GoogleMapComponent from '../../components/GoogleMapComponent';
+import LocationInput from '../../components/LocationInput';
+import RouteInfo from '../../components/RouteInfo';
+import TravelModeSelector from '../../components/TravelModeSelector';
+import { useGoogleMaps } from '../../hooks/useGoogleMaps';
 
-const { width, height } = Dimensions.get('window');
-const ASPECT_RATIO = width / height;
-const LATITUDE_DELTA = 0.0922;
-const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
-
-// Google Maps API Key
 const GOOGLE_MAPS_APIKEY = 'AIzaSyChJiEeeJHKaqvXh7MFYNSg0jHfR6MAo2o';
 
-// Sri Lankan coordinates (Colombo as default center)
-const SRI_LANKA_CENTER = {
-  latitude: 6.9271,
-  longitude: 79.8612,
-  latitudeDelta: LATITUDE_DELTA,
-  longitudeDelta: LONGITUDE_DELTA,
-};
-
-interface LocationCoordinate {
-  latitude: number;
-  longitude: number;
-}
-
 export default function RoutesScreen() {
-  const [startLocation, setStartLocation] = useState('');
-  const [endLocation, setEndLocation] = useState('');
-  const [startCoords, setStartCoords] = useState<LocationCoordinate | null>(null);
-  const [endCoords, setEndCoords] = useState<LocationCoordinate | null>(null);
-  const [region, setRegion] = useState(SRI_LANKA_CENTER);
-  const [loading, setLoading] = useState(false);
-  const [routeFound, setRouteFound] = useState(false);
-  const [distance, setDistance] = useState('');
-  const [duration, setDuration] = useState('');
-  
-  const mapRef = useRef<MapView>(null);
+  const {
+    mapState,
+    updateStartLocation,
+    updateEndLocation,
+    updateStartAddress,
+    updateEndAddress,
+    clearStart,
+    clearEnd,
+    setRouteInfo,
+    clearRoute,
+    reset,
+    handleLocationSelect,
+    setTravelMode,
+  } = useGoogleMaps();
 
-  useEffect(() => {
-    getCurrentLocation();
-  }, []);
-
-  const getCurrentLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Location permission is required to show your current location');
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      const currentRegion = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: LATITUDE_DELTA,
-        longitudeDelta: LONGITUDE_DELTA,
-      };
-      setRegion(currentRegion);
-    } catch (error) {
-      console.log('Error getting current location:', error);
-    }
-  };
-
-  const geocodeAddress = async (address: string): Promise<LocationCoordinate | null> => {
+  const geocodeAddress = async (address: string) => {
     try {
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_APIKEY}&region=lk`
@@ -84,8 +44,8 @@ export default function RoutesScreen() {
       if (data.results && data.results.length > 0) {
         const location = data.results[0].geometry.location;
         return {
-          latitude: location.lat,
-          longitude: location.lng,
+          lat: location.lat,
+          lng: location.lng,
         };
       }
       return null;
@@ -95,213 +55,163 @@ export default function RoutesScreen() {
     }
   };
 
-  const findRoute = async () => {
-    if (!startLocation.trim() || !endLocation.trim()) {
-      Alert.alert('Error', 'Please enter both starting point and destination');
+  const handleStartAddressSubmit = async () => {
+    if (!mapState.startAddress.trim()) return;
+    
+    const coordinates = await geocodeAddress(mapState.startAddress);
+    if (coordinates) {
+      updateStartLocation(coordinates, mapState.startAddress);
+    } else {
+      Alert.alert('Error', 'Could not find the starting location. Please check your address.');
+    }
+  };
+
+  const handleEndAddressSubmit = async () => {
+    if (!mapState.endAddress.trim()) return;
+    
+    const coordinates = await geocodeAddress(mapState.endAddress);
+    if (coordinates) {
+      updateEndLocation(coordinates, mapState.endAddress);
+    } else {
+      Alert.alert('Error', 'Could not find the destination. Please check your address.');
+    }
+  };
+
+  const handleFindRoute = () => {
+    if (!mapState.startLocation || !mapState.endLocation) {
+      Alert.alert('Error', 'Please select both start and end locations');
       return;
     }
-
-    setLoading(true);
-    setRouteFound(false);
-
-    try {
-      // Geocode both addresses
-      const startCoordinates = await geocodeAddress(startLocation);
-      const endCoordinates = await geocodeAddress(endLocation);
-
-      if (!startCoordinates || !endCoordinates) {
-        Alert.alert('Error', 'Could not find one or both locations. Please check your addresses.');
-        setLoading(false);
-        return;
-      }
-
-      setStartCoords(startCoordinates);
-      setEndCoords(endCoordinates);
-
-      // Fit map to show both markers
-      const coordinates = [startCoordinates, endCoordinates];
-      mapRef.current?.fitToCoordinates(coordinates, {
-        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-        animated: true,
-      });
-
-      setLoading(false);
-    } catch (error) {
-      console.error('Route finding error:', error);
-      Alert.alert('Error', 'Failed to find route. Please try again.');
-      setLoading(false);
-    }
-  };
-
-  const onDirectionsReady = (result: any) => {
-    setRouteFound(true);
-    setDistance(result.distance.toFixed(1) + ' km');
-    setDuration(Math.ceil(result.duration) + ' min');
-  };
-
-  const onDirectionsError = (errorMessage: string) => {
-    console.error('Directions error:', errorMessage);
-    Alert.alert('Route Error', 'Could not calculate route between these locations.');
-  };
-
-  const clearRoute = () => {
-    setStartLocation('');
-    setEndLocation('');
-    setStartCoords(null);
-    setEndCoords(null);
-    setRouteFound(false);
-    setDistance('');
-    setDuration('');
-    setRegion(SRI_LANKA_CENTER);
-  };
-
-  const useCurrentLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Location permission is required');
-        return;
-      }
-
-      setLoading(true);
-      const location = await Location.getCurrentPositionAsync({});
-      
-      // Reverse geocode to get address
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.coords.latitude},${location.coords.longitude}&key=${GOOGLE_MAPS_APIKEY}`
-      );
-      const data = await response.json();
-      
-      if (data.results && data.results.length > 0) {
-        setStartLocation(data.results[0].formatted_address);
-      }
-      
-      setLoading(false);
-    } catch (error) {
-      console.error('Current location error:', error);
-      setLoading(false);
-    }
+    // Route calculation is handled automatically in GoogleMapComponent
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       <View style={styles.header}>
-        <Ionicons name="menu" size={24} color="#000" />
-        <Text style={styles.headerTitle}>Routes</Text>
-        <TouchableOpacity onPress={clearRoute}>
-          <Ionicons name="refresh-outline" size={24} color="#000" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Input Fields */}
-      <View style={styles.form}>
-        <View style={styles.inputWrapper}>
-          <Ionicons name="ellipse-outline" size={20} color="#4A90E2" style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Enter starting point"
-            placeholderTextColor="#999"
-            value={startLocation}
-            onChangeText={setStartLocation}
-          />
-          <TouchableOpacity onPress={useCurrentLocation} style={styles.locationButton}>
-            <Ionicons name="locate-outline" size={18} color="#4A90E2" />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.inputWrapper}>
-          <Ionicons name="location-outline" size={20} color="#E74C3C" style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Enter destination"
-            placeholderTextColor="#999"
-            value={endLocation}
-            onChangeText={setEndLocation}
-          />
-        </View>
-
-        <TouchableOpacity 
-          style={[styles.button, loading && styles.buttonDisabled]} 
-          onPress={findRoute}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.buttonText}>Find Route</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* Route Info */}
-        {routeFound && (
-          <View style={styles.routeInfo}>
-            <View style={styles.routeInfoItem}>
-              <Ionicons name="time-outline" size={16} color="#666" />
-              <Text style={styles.routeInfoText}>{duration}</Text>
-            </View>
-            <View style={styles.routeInfoItem}>
-              <Ionicons name="speedometer-outline" size={16} color="#666" />
-              <Text style={styles.routeInfoText}>{distance}</Text>
-            </View>
+        <View style={styles.headerLeft}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="map" size={24} color="#fff" />
           </View>
-        )}
+          <View>
+            <Text style={styles.headerTitle}>Route Planner</Text>
+            <Text style={styles.headerSubtitle}>Find the best route anywhere</Text>
+          </View>
+        </View>
+        <View style={styles.headerRight}>
+          <Ionicons name="navigate-outline" size={16} color="#666" />
+          <Text style={styles.headerRightText}>Global Routes</Text>
+        </View>
       </View>
 
-      {/* Google Map */}
-      <View style={styles.mapContainer}>
-        <MapView
-          ref={mapRef}
-          provider={PROVIDER_GOOGLE}
-          style={styles.map}
-          region={region}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
-          showsCompass={true}
-          showsScale={true}
-          mapType="standard"
-          onRegionChangeComplete={setRegion}
-        >
-          {/* Start Location Marker */}
-          {startCoords && (
-            <Marker
-              coordinate={startCoords}
-              title="Start Location"
-              description={startLocation}
-              pinColor="#4A90E2"
-            />
-          )}
+      <View style={styles.container}>
+        {/* Controls Panel */}
+        <View style={styles.controlsPanel}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Main Controls */}
+            <View style={styles.controlsCard}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="navigate-outline" size={20} color="#4A90E2" />
+                <Text style={styles.cardTitle}>Plan Your Route</Text>
+              </View>
+              
+              <TravelModeSelector
+                selectedMode={mapState.selectedTravelMode}
+                onModeChange={setTravelMode}
+              />
 
-          {/* End Location Marker */}
-          {endCoords && (
-            <Marker
-              coordinate={endCoords}
-              title="Destination"
-              description={endLocation}
-              pinColor="#E74C3C"
-            />
-          )}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Starting Point</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="ellipse-outline" size={20} color="#4A90E2" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., Colombo, Kandy, Galle..."
+                    placeholderTextColor="#999"
+                    value={mapState.startAddress}
+                    onChangeText={updateStartAddress}
+                    onSubmitEditing={handleStartAddressSubmit}
+                    returnKeyType="search"
+                  />
+                  {mapState.startAddress ? (
+                    <TouchableOpacity onPress={clearStart} style={styles.clearButton}>
+                      <Ionicons name="close-circle" size={20} color="#999" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
 
-          {/* Route Directions */}
-          {startCoords && endCoords && (
-            <MapViewDirections
-              origin={startCoords}
-              destination={endCoords}
-              apikey={GOOGLE_MAPS_APIKEY}
-              strokeWidth={4}
-              strokeColor="#4A90E2"
-              optimizeWaypoints={true}
-              onStart={(params) => {
-                console.log(`Started routing between "${params.origin}" and "${params.destination}"`);
-              }}
-              onReady={onDirectionsReady}
-              onError={onDirectionsError}
-              mode="DRIVING"
-              language="en"
-              region="LK"
-            />
-          )}
-        </MapView>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Destination</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="location-outline" size={20} color="#E74C3C" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., Negombo, Nuwara Eliya..."
+                    placeholderTextColor="#999"
+                    value={mapState.endAddress}
+                    onChangeText={updateEndAddress}
+                    onSubmitEditing={handleEndAddressSubmit}
+                    returnKeyType="search"
+                  />
+                  {mapState.endAddress ? (
+                    <TouchableOpacity onPress={clearEnd} style={styles.clearButton}>
+                      <Ionicons name="close-circle" size={20} color="#999" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.findRouteButton,
+                  (!mapState.startLocation || !mapState.endLocation) && styles.buttonDisabled
+                ]}
+                onPress={handleFindRoute}
+                disabled={!mapState.startLocation || !mapState.endLocation}
+              >
+                <Ionicons name="navigate-outline" size={16} color="#fff" />
+                <Text style={styles.findRouteButtonText}>Calculate Shortest Route</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.clearAllButton} onPress={reset}>
+                <Text style={styles.clearAllButtonText}>Clear All</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Route Information */}
+            {mapState.routeInfo && (
+              <RouteInfo 
+                routeInfo={mapState.routeInfo}
+                onClearRoute={clearRoute}
+                travelMode={mapState.selectedTravelMode}
+              />
+            )}
+
+            {/* Instructions */}
+            <View style={styles.instructionsCard}>
+              <Text style={styles.instructionsTitle}>How to use:</Text>
+              <Text style={styles.instructionItem}>• Type any location worldwide (Sri Lanka supported)</Text>
+              <Text style={styles.instructionItem}>• Or tap on the map to select locations</Text>
+              <Text style={styles.instructionItem}>• Choose travel mode: driving, transit, or walking</Text>
+              <Text style={styles.instructionItem}>• Get bus routes and public transport info</Text>
+              <Text style={styles.instructionItem}>• Use the controls to get your current location</Text>
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* Map */}
+        <View style={styles.mapContainer}>
+          <GoogleMapComponent
+            startLocation={mapState.startLocation}
+            endLocation={mapState.endLocation}
+            route={mapState.route}
+            travelMode={mapState.selectedTravelMode}
+            onRouteCalculated={setRouteInfo}
+            onLocationSelect={handleLocationSelect}
+            onReset={reset}
+          />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -327,98 +237,161 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  form: {
-    padding: 16,
-    backgroundColor: '#F7F8FA',
-  },
-  inputWrapper: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  iconContainer: {
+    backgroundColor: '#4A90E2',
+    padding: 8,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#666',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerRightText: {
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#666',
+  },
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  controlsPanel: {
+    width: '40%',
+    backgroundColor: '#F7F8FA',
+    padding: 16,
+  },
+  controlsCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginBottom: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#eee',
+    padding: 16,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  cardTitle: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   inputIcon: {
     marginRight: 8,
   },
   input: {
     flex: 1,
-    height: 48,
+    height: 44,
     fontSize: 14,
     color: '#333',
   },
-  locationButton: {
-    padding: 8,
+  clearButton: {
+    padding: 4,
   },
-  button: {
+  findRouteButton: {
     backgroundColor: '#4A90E2',
-    paddingVertical: 14,
-    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    shadowColor: '#4A90E2',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
   },
   buttonDisabled: {
     backgroundColor: '#ccc',
   },
-  buttonText: {
+  findRouteButtonText: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
+    marginLeft: 6,
   },
-  routeInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 12,
-    padding: 12,
+  clearAllButton: {
+    backgroundColor: '#6c757d',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  clearAllButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  instructionsCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
+    padding: 16,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
-  routeInfoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  routeInfoText: {
-    marginLeft: 4,
+  instructionsTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#333',
+    marginBottom: 8,
+  },
+  instructionItem: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
   },
   mapContainer: {
     flex: 1,
-    marginTop: 8,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: -2 },
+    shadowOffset: { width: -2, height: 0 },
     elevation: 5,
-  },
-  map: {
-    flex: 1,
+    margin: 8,
+    marginLeft: 0,
   },
 });
