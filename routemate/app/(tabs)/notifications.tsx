@@ -1,8 +1,9 @@
 // app/notifications.tsx
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useSocket } from '@/hooks/useSocket';
 
 type IoniconName = 'bus-outline' | 'briefcase-outline' | 'map-outline';
 
@@ -18,6 +19,7 @@ type NotificationItem = {
 };
 
 export default function NotificationsScreen() {
+  const socket = useSocket();
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: '1',
@@ -80,6 +82,63 @@ export default function NotificationsScreen() {
       read: false,
     },
   ]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (payload: { text: string; user: string; ts: number }) => {
+      const item: NotificationItem = {
+        id: String(payload.ts),
+        type: 'New Post',
+        message: `${payload.user}: ${payload.text}`,
+        time: 'Just now',
+        icon: 'map-outline',
+        color: '#27AE60',
+        bgColor: '#E9F9F0',
+        read: false,
+      };
+      setNotifications((prev) => [item, ...prev]);
+      Alert.alert('New Post', `${payload.user} posted: ${payload.text}`);
+    };
+    socket.on('new-post', handler);
+    const lostHandler = (item: any) => {
+      const n: NotificationItem = {
+        id: String(item.lost_item_id || Date.now()),
+        type: 'Lost Item',
+        message: `${item.item_name || ''}`,
+        time: 'Just now',
+        icon: 'briefcase-outline',
+        color: '#F2994A',
+        bgColor: '#FFF4E8',
+        read: false,
+      };
+      setNotifications((prev) => [n, ...prev]);
+      Alert.alert('Lost & Found', `${item.item_name || ''}`);
+    };
+    socket.on('lost-item', lostHandler);
+    const pushStatusHandler = (data: any) => {
+      const success = data?.success ?? 0;
+      const failure = data?.failure ?? 0;
+      const msg = `Push sent: ${success} ok${failure ? `, ${failure} failed` : ''}`;
+      const n: NotificationItem = {
+        id: `${Date.now()}-push`,
+        type: 'System',
+        message: msg,
+        time: 'Just now',
+        icon: 'briefcase-outline',
+        color: '#27AE60',
+        bgColor: '#E9F9F0',
+        read: false,
+      };
+      setNotifications((prev) => [n, ...prev]);
+      Alert.alert('Notification Status', msg);
+    };
+    socket.on('push-status', pushStatusHandler);
+    return () => {
+      socket.off('new-post', handler);
+      socket.off('lost-item', lostHandler);
+      socket.off('push-status', pushStatusHandler);
+    };
+  }, [socket]);
 
   const markAsRead = (id: string) => {
     setNotifications((prev) =>

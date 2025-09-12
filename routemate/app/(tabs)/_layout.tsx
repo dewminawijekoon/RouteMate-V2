@@ -16,6 +16,7 @@ export default function TabLayout() {
     <Tabs
       initialRouteName="home"
       screenOptions={{
+        lazy: false,
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
@@ -52,6 +53,15 @@ export default function TabLayout() {
           title: 'Notifications',
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="bell.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="lost"
+        options={{
+          title: 'Lost & Found',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="briefcase-outline" size={24} color={color} />
           ),
         }}
       />

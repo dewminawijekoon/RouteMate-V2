@@ -12,6 +12,8 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
+  // Push notifications registration is disabled in web/dev until configured
+
   if (!loaded) {
     // Async font loading only occurs in development.
     return null;

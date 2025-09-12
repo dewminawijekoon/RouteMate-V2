@@ -1,0 +1,479 @@
+// app/(tabs)/profile.tsx
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+  Image,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { ThemedText } from '@/components/ThemedText';
+import { API_URL } from '@/constants/config';
+
+const USER_ID = 1; // TODO: replace with authenticated user id
+
+export default function ProfileScreen() {
+  const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+
+  const [name, setName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [avatar, setAvatar] = useState<string>('https://i.pravatar.cc/300?img=12');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/users/${USER_ID}`);
+        const data = await res.json();
+        const u = data?.user;
+        if (u) {
+          setName(u.name || '');
+          setEmail(u.email || '');
+          setPhone(u.phone || '');
+          if (u.profile_picture) setAvatar(u.profile_picture);
+        }
+      } catch {
+        // ignore for now
+      } finally {
+        setInitializing(false);
+      }
+    })();
+  }, []);
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#0B1220' }}>
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={['#0EA5E9', '#2563EB', '#0B1220']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.2, y: 1 }}
+        style={styles.hero}
+      >
+        <View style={styles.heroTopRow}>
+          <ThemedText type="title" style={styles.heroTitle}>
+            Profile
+          </ThemedText>
+
+          {!editing ? (
+            <Pressable
+              style={[styles.iconBtn, styles.lightBtn]}
+              android_ripple={{ color: '#00000022', borderless: true }}
+              onPress={() => setEditing(true)}
+            >
+              <Ionicons name="create-outline" size={20} color="#0B1220" />
+            </Pressable>
+          ) : (
+            <Pressable
+              style={[styles.iconBtn, styles.darkBtn]}
+              android_ripple={{ color: '#ffffff22', borderless: true }}
+              onPress={() => setEditing(false)}
+            >
+              <Ionicons name="close" size={20} color="#fff" />
+            </Pressable>
+          )}
+        </View>
+
+        {/* Floating Avatar */}
+        <View style={styles.avatarWrap}>
+          <View style={styles.avatarRing}>
+            <Image source={{ uri: avatar }} style={styles.avatar} />
+          </View>
+
+          {editing && (
+            <Pressable
+              style={styles.avatarEdit}
+              onPress={() =>
+                Alert.alert('Change avatar', 'Paste an image URL in the “Avatar URL” field below.')
+              }
+            >
+              <Ionicons name="camera" size={16} color="#fff" />
+            </Pressable>
+          )}
+        </View>
+      </LinearGradient>
+
+      {/* Body */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.body}>
+          {/* Profile Card */}
+          <View style={styles.card}>
+            {initializing ? (
+              <View style={styles.centerRow}>
+                <ActivityIndicator />
+                <ThemedText style={{ marginLeft: 8, color: '#475569' }}>
+                  Loading profile…
+                </ThemedText>
+              </View>
+            ) : (
+              <>
+                {!editing ? (
+                  <View style={{ marginTop: 8 }}>
+                    <ThemedText type="title" style={styles.name}>
+                      {name || 'User'}
+                    </ThemedText>
+                    <InfoRow icon="mail-outline" text={email || '—'} />
+                    {!!phone && <InfoRow icon="call-outline" text={phone} />}
+                  </View>
+                ) : (
+                  <View style={{ marginTop: 8 }}>
+                    <LabeledInput
+                      icon="person-outline"
+                      placeholder="Name"
+                      value={name}
+                      onChangeText={setName}
+                    />
+                    <LabeledInput
+                      icon="call-outline"
+                      placeholder="Phone"
+                      keyboardType="phone-pad"
+                      value={phone}
+                      onChangeText={setPhone}
+                    />
+                    <LabeledInput
+                      icon="image-outline"
+                      placeholder="Avatar URL"
+                      value={avatar}
+                      onChangeText={setAvatar}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <InfoRow icon="mail-outline" text={email || '—'} dim />
+                  </View>
+                )}
+
+                {/* Actions */}
+                <View style={styles.actionsRow}>
+                  {!editing ? (
+                    <ActionButton
+                      label="Edit"
+                      icon="create-outline"
+                      variant="secondary"
+                      onPress={() => setEditing(true)}
+                    />
+                  ) : (
+                    <>
+                      <ActionButton
+                        label={loading ? 'Saving…' : 'Save'}
+                        icon="save-outline"
+                        loading={loading}
+                        onPress={async () => {
+                          try {
+                            setLoading(true);
+                            const res = await fetch(`${API_URL}/users/${USER_ID}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                name,
+                                phone,
+                                profile_picture: avatar,
+                              }),
+                            });
+                            const data = await res.json();
+                            if (data?.ok) {
+                              Alert.alert('Saved', 'Profile updated successfully.');
+                              setEditing(false);
+                            } else {
+                              Alert.alert('Error', data?.message || 'Failed to update');
+                            }
+                          } catch {
+                            Alert.alert('Error', 'Failed to update');
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                      />
+                      <ActionButton
+                        label="Cancel"
+                        icon="close"
+                        variant="ghost"
+                        onPress={() => setEditing(false)}
+                      />
+                    </>
+                  )}
+                </View>
+              </>
+            )}
+          </View>
+
+          {/* Settings List */}
+          <View style={styles.card}>
+            <MenuItem
+              icon="settings-outline"
+              label="Preferences"
+              onPress={() => Alert.alert('Preferences')}
+            />
+            <MenuItem
+              icon="headset-outline"
+              label="Customer Care"
+              onPress={() => Alert.alert('Customer Care')}
+            />
+            <MenuItem
+              icon="help-circle-outline"
+              label="Help Center"
+              onPress={() => Alert.alert('Help Center')}
+            />
+            <MenuItem
+              icon="log-out-outline"
+              label="Logout"
+              logout
+              onPress={() => Alert.alert('Logged out')}
+            />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function InfoRow({
+  icon,
+  text,
+  dim,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  text: string;
+  dim?: boolean;
+}) {
+  return (
+    <View style={styles.infoRow}>
+      <Ionicons name={icon} size={18} color={dim ? '#94A3B8' : '#64748B'} />
+      <ThemedText style={[styles.infoText, dim && { color: '#94A3B8' }]} numberOfLines={1}>
+        {text}
+      </ThemedText>
+    </View>
+  );
+}
+
+function LabeledInput(
+  props: React.ComponentProps<typeof TextInput> & {
+    icon: keyof typeof Ionicons.glyphMap;
+  }
+) {
+  const { icon, style, ...rest } = props;
+  return (
+    <View style={styles.inputRow}>
+      <Ionicons name={icon} size={18} color="#64748B" />
+      <TextInput placeholderTextColor="#94A3B8" style={[styles.input, style]} {...rest} />
+    </View>
+  );
+}
+
+function ActionButton({
+  label,
+  icon,
+  onPress,
+  variant = 'primary',
+  loading,
+}: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  loading?: boolean;
+}) {
+  const isSecondary = variant === 'secondary';
+  const isGhost = variant === 'ghost';
+  const fg = isSecondary || isGhost ? '#0B1220' : '#fff';
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.ctaBtn,
+        variant === 'primary' && styles.primaryBtn,
+        variant === 'secondary' && styles.secondaryBtn,
+        variant === 'ghost' && styles.ghostBtn,
+      ]}
+      android_ripple={{ color: isSecondary ? '#00000010' : '#ffffff22', borderless: false }}
+    >
+      {loading ? (
+        <ActivityIndicator color={fg} />
+      ) : (
+        <>
+          <Ionicons name={icon} size={18} color={fg} />
+          <ThemedText style={[styles.ctaText, { color: fg }]}>{label}</ThemedText>
+        </>
+      )}
+    </Pressable>
+  );
+}
+
+function MenuItem({
+  icon,
+  label,
+  onPress,
+  logout,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  logout?: boolean;
+}) {
+  return (
+    <Pressable
+      style={[styles.menuItem, logout && styles.logoutItem]}
+      onPress={onPress}
+      android_ripple={{ color: logout ? '#ef444420' : '#00000010' }}
+    >
+      <View style={[styles.menuIcon, logout && { backgroundColor: '#fee2e2' }]}>
+        <Ionicons name={icon} size={20} color={logout ? '#ef4444' : '#0EA5E9'} />
+      </View>
+      <ThemedText style={[styles.menuLabel, logout && { color: '#ef4444', fontWeight: '700' }]}>
+        {label}
+      </ThemedText>
+      <Ionicons
+        name="chevron-forward-outline"
+        size={20}
+        color={logout ? '#ef4444' : '#94A3B8'}
+      />
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  // Header
+  hero: {
+    paddingTop: 20,
+    paddingBottom: 36,
+    paddingHorizontal: 16,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    overflow: 'hidden',
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heroTitle: { color: '#fff', fontWeight: '800', letterSpacing: 0.3, fontSize: 22 },
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lightBtn: { backgroundColor: '#F8FAFC' },
+  darkBtn: { backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+
+  // Avatar
+  avatarWrap: { position: 'absolute', left: 0, right: 0, bottom: -40, alignItems: 'center' },
+  avatarRing: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    padding: 3,
+    backgroundColor: '#ffffff',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  avatar: { width: '100%', height: '100%', borderRadius: 48 },
+  avatarEdit: {
+    position: 'absolute',
+    right: (96 - 32) / -2 + 6,
+    bottom: 4,
+    backgroundColor: '#2563EB',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+
+  // Body
+  body: { paddingTop: 56, paddingHorizontal: 16, flex: 1 },
+
+  // Cards
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#EEF2F6',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+  centerRow: { flexDirection: 'row', alignItems: 'center' },
+
+  // Text
+  name: { textAlign: 'left', marginBottom: 6, fontWeight: '800', fontSize: 22, color: '#0B1220' },
+
+  // Info rows & inputs
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  infoText: { color: '#334155', flex: 1 },
+
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  input: { flex: 1, color: '#0B1220' },
+
+  // Actions
+  actionsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 12 },
+  ctaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    minWidth: 120,
+    justifyContent: 'center',
+  },
+  primaryBtn: { backgroundColor: '#2563EB' },
+  secondaryBtn: { backgroundColor: '#E2E8F0' },
+  ghostBtn: { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#E2E8F0' },
+  ctaText: { fontWeight: '800' },
+
+  // Menu
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  menuIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E0F2FE',
+    marginRight: 12,
+  },
+  menuLabel: { flex: 1, fontSize: 16, color: '#0B1220' },
+  logoutItem: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FEE2E2' },
+});
+
