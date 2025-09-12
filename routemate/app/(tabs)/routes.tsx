@@ -3,14 +3,16 @@ import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 export default function RoutesScreen() {
+  const { t } = useTranslation();
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       <View style={styles.header}>
         <Ionicons name="menu" size={24} color="#000" />
-        <Text style={styles.headerTitle}>Routes</Text>
+        <Text style={styles.headerTitle}>{t('routes')}</Text>
         <View style={{ width: 24 }} /> 
       </View>
 
@@ -20,7 +22,7 @@ export default function RoutesScreen() {
           <Ionicons name="ellipse-outline" size={20} color="#aaa" style={styles.inputIcon} />
           <TextInput
             style={styles.input}
-            placeholder="Enter starting point"
+            placeholder={t('enterStartingPoint')}
             placeholderTextColor="#999"
           />
         </View>
@@ -28,20 +30,20 @@ export default function RoutesScreen() {
           <Ionicons name="location-outline" size={20} color="#aaa" style={styles.inputIcon} />
           <TextInput
             style={styles.input}
-            placeholder="Enter destination"
+            placeholder={t('enterDestination')}
             placeholderTextColor="#999"
           />
         </View>
 
         <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Find Route</Text>
+          <Text style={styles.buttonText}>{t('findRoute')}</Text>
         </TouchableOpacity>
 
       </View>
 
       {/* Map Placeholder */}
       <View style={styles.mapPlaceholder}>
-        <Text style={{ color: '#888' }}>Google Map will appear here</Text>
+        <Text style={{ color: '#888' }}>{t('mapPlaceholder')}</Text>
       </View>
     </SafeAreaView>
   );

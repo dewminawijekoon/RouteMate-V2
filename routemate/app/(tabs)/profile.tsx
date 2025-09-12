@@ -7,10 +7,13 @@ import { ThemedText } from '@/components/ThemedText';
 import { API_URL } from '@/constants/config';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '@/src/components/LanguageSelector';
 
 const USER_ID = 1; // TODO: replace with authenticated user id
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
@@ -41,9 +44,10 @@ export default function ProfileScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F7FB' }}>
       {/* Top bar */}
       <View style={styles.topBar}>
-        <ThemedText type="title" style={styles.topTitle}>Profile</ThemedText>
-        <Pressable style={styles.topAction} onPress={() => setEditing((v) => !v)}>
+        <ThemedText type="title" style={styles.topTitle}>{t('profile')}</ThemedText>
+        <Pressable style={styles.topAction} onPress={() => setEditing((v) => !v)} accessibilityRole="button" accessibilityLabel={editing ? t('cancel') : t('edit')}>
           <Ionicons name={editing ? 'close' : 'create-outline'} size={18} color="#0B1220" />
+          <ThemedText style={styles.topActionText}>{editing ? t('cancel') : t('edit')}</ThemedText>
         </Pressable>
       </View>
 
@@ -60,7 +64,7 @@ export default function ProfileScreen() {
                     if (Platform.OS !== 'web') {
                       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                       if (status !== 'granted') {
-                        Alert.alert('Permission needed', 'Allow access to your photos to change your picture.');
+                        Alert.alert(t('permissionNeeded'), t('allowAccessPhotos'));
                         return;
                       }
                     }
@@ -75,10 +79,10 @@ export default function ProfileScreen() {
                       if (uri) setAvatar(uri);
                     }
                   } catch (e) {
-                    Alert.alert('Error', 'Failed to pick image');
+                    Alert.alert(t('error'), t('failedToPickImage'));
                   }
                 }}
-                accessibilityLabel="Change profile photo"
+                accessibilityLabel={t('avatarUrl')}
               >
                 <Ionicons name="camera" size={14} color="#fff" />
               </Pressable>
@@ -88,9 +92,10 @@ export default function ProfileScreen() {
                 <>
                   {loaded ? (
                     <>
-                      <ThemedText type="title" style={styles.name}>{name || 'User'}</ThemedText>
-                      <ThemedText style={styles.email}>{email || '—'}</ThemedText>
+                      <ThemedText type="title" style={styles.name}>{name || t('name')}</ThemedText>
+                      <ThemedText style={styles.email}>{email || t('emailPlaceholder')}</ThemedText>
                       {!!phone && <ThemedText style={styles.phone}>{phone}</ThemedText>}
+                      <ThemedText style={styles.greeting}>{t('greeting', { name: name || t('name') })}</ThemedText>
                     </>
                   ) : (
                     <>
@@ -102,19 +107,25 @@ export default function ProfileScreen() {
                 </>
               ) : (
                 <>
-                  <TextInput style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
-                  <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-                  <TextInput style={styles.input} placeholder="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-                  <TextInput style={styles.input} placeholder="Avatar URL" value={avatar} onChangeText={setAvatar} autoCapitalize="none" />
+                  <TextInput style={styles.input} placeholder={t('name')} value={name} onChangeText={setName} />
+                  <TextInput style={styles.input} placeholder={t('email')}
+                    value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+                  <TextInput style={styles.input} placeholder={t('phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+                  <TextInput style={styles.input} placeholder={t('avatarUrl')} value={avatar} onChangeText={setAvatar} autoCapitalize="none" />
                 </>
               )}
+              {/* Language selector section */}
+              <View style={styles.langSection}>
+                <ThemedText style={styles.languageLabel}>{t('language')}</ThemedText>
+                <LanguageSelector />
+              </View>
             </View>
           </View>
 
           {editing && (
             <View style={styles.actions}>
               <Pressable style={[styles.btn, styles.secondary]} onPress={() => setEditing(false)}>
-                <ThemedText style={[styles.btnText, { color: '#0B1220' }]}>Cancel</ThemedText>
+                <ThemedText style={[styles.btnText, { color: '#0B1220' }]}>{t('cancel')}</ThemedText>
               </Pressable>
               <Pressable
                 style={[styles.btn, styles.primary]}
@@ -157,26 +168,26 @@ export default function ProfileScreen() {
                           if (u.profile_picture) setAvatar(u.profile_picture);
                         }
                       } catch {}
-                      Alert.alert('Saved', 'Profile updated');
+                      Alert.alert(t('saved'), t('profileUpdated'));
                       setEditing(false);
                     } else {
-                      Alert.alert('Error', 'Failed to update');
+                      Alert.alert(t('error'), t('failedToUpdate'));
                     }
                   } catch {}
                   finally { setLoading(false); }
                 }}
               >
-                <ThemedText style={[styles.btnText, { color: '#fff' }]}>{loading ? 'Saving…' : 'Save'}</ThemedText>
+                <ThemedText style={[styles.btnText, { color: '#fff' }]}>{loading ? t('saving') : t('save')}</ThemedText>
               </Pressable>
             </View>
           )}
 
           {/* Quick actions */}
           <View style={styles.tiles}>
-            <MenuItem icon="settings-outline" label="Preferences" onPress={() => Alert.alert('Preferences')} />
-            <MenuItem icon="headset-outline" label="Customer Care" onPress={() => Alert.alert('Customer Care')} />
-            <MenuItem icon="help-circle-outline" label="Help Center" onPress={() => Alert.alert('Help Center')} />
-            <MenuItem icon="log-out-outline" label="Logout" logout onPress={() => Alert.alert('Logged out')} />
+            <MenuItem icon="settings-outline" label={t('preferences')} onPress={() => Alert.alert(t('preferences'))} />
+            <MenuItem icon="headset-outline" label={t('customerCare')} onPress={() => Alert.alert(t('customerCare'))} />
+            <MenuItem icon="help-circle-outline" label={t('helpCenter')} onPress={() => Alert.alert(t('helpCenter'))} />
+            <MenuItem icon="log-out-outline" label={t('logout')} logout onPress={() => Alert.alert(t('logout'))} />
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -184,7 +195,7 @@ export default function ProfileScreen() {
   );
 }
 
-function MenuItem({ icon, label, onPress, logout }: { icon: any; label: string; onPress: () => void; logout?: boolean }) {
+function MenuItem({ icon, label, onPress, logout }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; logout?: boolean }) {
   return (
     <Pressable style={[styles.menuItem, logout && styles.logoutItem]} onPress={onPress}>
       <View style={styles.menuIcon}>
@@ -199,7 +210,8 @@ function MenuItem({ icon, label, onPress, logout }: { icon: any; label: string; 
 const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#F5F7FB' },
   topTitle: { },
-  topAction: { backgroundColor: '#E2E8F0', padding: 8, borderRadius: 10 },
+  topAction: { backgroundColor: '#E2E8F0', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  topActionText: { fontWeight: '700', color: '#0B1220' },
 
   container: { padding: 16, gap: 12, flex: 1 },
 
@@ -209,6 +221,7 @@ const styles = StyleSheet.create({
   name: { fontWeight: '800', fontSize: 22, marginBottom: 4, color: '#0B1220' },
   email: { color: '#1F2937' },
   phone: { color: '#0F172A', marginTop: 2 },
+  greeting: { color: '#334155', marginTop: 6 },
 
   input: { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginBottom: 8, color: '#0B1220' },
 
@@ -225,4 +238,6 @@ const styles = StyleSheet.create({
   logoutItem: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FEE2E2' },
   skelName: { height: 20, width: '60%', backgroundColor: '#E5E7EB', borderRadius: 6, marginBottom: 8 },
   skelLine: { height: 14, width: '80%', backgroundColor: '#E5E7EB', borderRadius: 6, marginBottom: 6 },
+  langSection: { marginTop: 12, gap: 8 },
+  languageLabel: { fontWeight: '700', color: '#0B1220' },
 });
