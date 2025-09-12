@@ -12,12 +12,14 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useAuth } from '../../contexts/AuthContext';
 
   const onSwitchToLogin = () => {
     router.push('/');  // This will navigate to the login screen
   };
 
 const SignUpScreen: React.FC = () => {
+  const { signUp } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -28,13 +30,14 @@ const SignUpScreen: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -46,8 +49,18 @@ const SignUpScreen: React.FC = () => {
       Alert.alert('Error', 'Please agree to the terms and conditions');
       return;
     }
-    // Handle signup logic here
-    console.log('Signup attempt:', formData);
+
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      await signUp(formData.email, formData.password, formData.name);
+      // AuthContext will handle navigation to home after auto-login
+    } catch (error: any) {
+      Alert.alert('Signup Failed', error.message || 'Unable to create account. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -193,8 +206,14 @@ const SignUpScreen: React.FC = () => {
           </View>
 
           {/* Sign Up Button */}
-          <TouchableOpacity style={styles.signUpButton} onPress={handleSubmit}>
-            <Text style={styles.signUpButtonText}>Create Account</Text>
+          <TouchableOpacity 
+            style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]} 
+            onPress={handleSubmit}
+            disabled={isLoading}
+          >
+            <Text style={styles.signUpButtonText}>
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -209,12 +228,7 @@ const SignUpScreen: React.FC = () => {
         </View>
 
         {/* Welcome Bonus */}
-        <View style={styles.bonusContainer}>
-          <Text style={styles.bonusTitle}>🎉 Welcome Bonus!</Text>
-          <Text style={styles.bonusText}>
-            Get 100 points when you sign up and start your journey to Bronze rank!
-          </Text>
-        </View>
+        
       </ScrollView>
     </SafeAreaView>
   );
@@ -338,6 +352,10 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  signUpButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.7,
   },
   signUpButtonText: {
     color: '#FFFFFF',

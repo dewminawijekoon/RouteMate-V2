@@ -10,14 +10,16 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useTranslation } from 'react-i18next';
 import ChatbotBubble from '@/components/ChatbotBubble';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
 
   return (
-    <View style={{ flex: 1 }}>
-      <Tabs
+    <ProtectedRoute>
+      <View style={{ flex: 1 }}>
+        <Tabs
         initialRouteName="home"
         screenOptions={{
           lazy: false,
@@ -97,5 +99,6 @@ export default function TabLayout() {
       {/* Floating Chatbot Bubble */}
       <ChatbotBubble />
     </View>
+    </ProtectedRoute>
   );
 }

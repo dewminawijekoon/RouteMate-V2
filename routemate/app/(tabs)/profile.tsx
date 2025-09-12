@@ -9,11 +9,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '@/src/components/LanguageSelector';
-
-const USER_ID = 1; // TODO: replace with authenticated user id
+import { useAuth } from '@/contexts/AuthContext';
+import * as SecureStore from 'expo-secure-store';
+import { getApiUrl, API_CONFIG } from '@/constants/api';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
+  const { isAuthenticated, signOut } = useAuth();
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
@@ -21,21 +23,43 @@ export default function ProfileScreen() {
   const [phone, setPhone] = useState('');
   const [avatar, setAvatar] = useState('https://i.pravatar.cc/300?img=12');
   const [loaded, setLoaded] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
 
   const fetchUser = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/users/${USER_ID}`);
-      const data = await res.json();
-      const u = data?.user;
-      if (u) {
-        setName(u.name || '');
-        setEmail(u.email || '');
-        setPhone(u.phone || '');
-        if (u.profile_picture) setAvatar(u.profile_picture);
+      if (!isAuthenticated) {
+        setLoaded(true);
+        return;
       }
-    } catch {}
+
+      const token = await SecureStore.getItemAsync('authToken');
+      if (!token) {
+        setLoaded(true);
+        return;
+      }
+
+      const res = await fetch(getApiUrl(API_CONFIG?.AUTH_ENDPOINTS?.ME || '/api/auth/me'), {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        const u = data?.user;
+        if (u) {
+          setUserId(u.user_id);
+          setName(u.name || '');
+          setEmail(u.email || '');
+          setPhone(u.phone || '');
+          if (u.profile_picture) setAvatar(u.profile_picture);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
     finally { setLoaded(true); }
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => { fetchUser(); }, [fetchUser]);
   useFocusEffect(useCallback(() => { fetchUser(); }, [fetchUser]));
@@ -142,7 +166,7 @@ export default function ProfileScreen() {
                       } else {
                         form.append('file', { uri: avatar, name: 'avatar.jpg', type: 'image/jpeg' } as any);
                       }
-                      const up = await fetch(`${API_URL}/users/${USER_ID}/avatar`, { method: 'POST', body: form });
+                      const up = await fetch(`${API_URL}/users/${userId}/avatar`, { method: 'POST', body: form });
                       const upData = await up.json();
                       if (upData?.ok && upData?.url) {
                         pictureUrl = upData.url;
@@ -150,7 +174,7 @@ export default function ProfileScreen() {
                       }
                     }
 
-                    const res = await fetch(`${API_URL}/users/${USER_ID}`, {
+                    const res = await fetch(`${API_URL}/users/${userId}`, {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ name, email, phone, profile_picture: pictureUrl }),
@@ -159,7 +183,7 @@ export default function ProfileScreen() {
                     if (data?.ok) {
                       // Re-fetch to ensure we reflect DB state
                       try {
-                        const fresh = await fetch(`${API_URL}/users/${USER_ID}`).then((r) => r.json());
+                        const fresh = await fetch(`${API_URL}/users/${userId}`).then((r) => r.json());
                         const u = fresh?.user;
                         if (u) {
                           setName(u.name || '');
@@ -187,7 +211,20 @@ export default function ProfileScreen() {
             <MenuItem icon="settings-outline" label={t('preferences')} onPress={() => Alert.alert(t('preferences'))} />
             <MenuItem icon="headset-outline" label={t('customerCare')} onPress={() => Alert.alert(t('customerCare'))} />
             <MenuItem icon="help-circle-outline" label={t('helpCenter')} onPress={() => Alert.alert(t('helpCenter'))} />
-            <MenuItem icon="log-out-outline" label={t('logout')} logout onPress={() => Alert.alert(t('logout'))} />
+            <MenuItem icon="log-out-outline" label={t('logout')} logout onPress={() => {
+              Alert.alert(
+                t('logout'),
+                t('logoutConfirmation', 'Are you sure you want to logout?'),
+                [
+                  { text: t('cancel', 'Cancel'), style: 'cancel' },
+                  { 
+                    text: t('logout'), 
+                    style: 'destructive',
+                    onPress: () => signOut()
+                  }
+                ]
+              );
+            }} />
           </View>
         </View>
       </KeyboardAvoidingView>

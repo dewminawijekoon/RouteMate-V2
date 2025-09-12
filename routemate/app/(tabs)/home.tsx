@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,10 +9,50 @@ import { ThemedView } from '@/components/ThemedView';
 import { HelloWave } from '@/components/HelloWave';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/contexts/AuthContext';
+import * as SecureStore from 'expo-secure-store';
+import { getApiUrl, API_CONFIG } from '@/constants/api';
 
 const TravelerHomeScreen = () => {
   const router = useRouter();
   const { t } = useTranslation();
+  const { isAuthenticated } = useAuth();
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        if (!isAuthenticated) {
+          setIsLoading(false);
+          return;
+        }
+
+        const token = await SecureStore.getItemAsync('authToken');
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await fetch(getApiUrl(API_CONFIG?.AUTH_ENDPOINTS?.ME || '/api/auth/me'), {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated]);
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
@@ -21,7 +61,12 @@ const TravelerHomeScreen = () => {
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <ThemedText type="title" style={styles.welcomeText}>
-              {t('welcomeBack', { name: 'Ravi' })}
+              {isLoading 
+                ? t('loading') 
+                : user 
+                  ? t('welcomeBack', { name: user.name || 'User' })
+                  : t('welcomeBack', { name: 'Guest' })
+              }
             </ThemedText>
             <HelloWave />
           </View>
@@ -44,7 +89,12 @@ const TravelerHomeScreen = () => {
           </View>
           <View style={styles.pointsContainer}>
             <IconSymbol name={"bell.fill" as any} size={18} color="#FFD700" />
-            <ThemedText style={styles.pointsText}>{t('points', { count: 1250 })}</ThemedText>
+            <ThemedText style={styles.pointsText}>
+              {user?.gamification_points 
+                ? t('points', { count: user.gamification_points })
+                : t('points', { count: 0 })
+              }
+            </ThemedText>
           </View>
         </View>
 

@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
+import { getApiUrl, API_CONFIG } from '@/constants/api';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -33,30 +34,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const response = await fetch('http://your-backend.com/api/auth/login', {
+      console.log('API_CONFIG available:', !!API_CONFIG);
+      console.log('AUTH_ENDPOINTS available:', !!API_CONFIG?.AUTH_ENDPOINTS);
+      
+      const endpoint = API_CONFIG?.AUTH_ENDPOINTS?.LOGIN || '/api/auth/login';
+      const url = getApiUrl(endpoint);
+      console.log('Attempting to sign in with URL:', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      if (!response.ok) throw new Error('Login failed');
-      const { token } = await response.json();
-      await SecureStore.setItemAsync('authToken', token);
+      
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Response data:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+      
+      await SecureStore.setItemAsync('authToken', data.token);
       setIsAuthenticated(true);
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/home');
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, name?: string) => {
     try {
-      const response = await fetch('http://your-backend.com/api/auth/signup', {
+      const endpoint = API_CONFIG?.AUTH_ENDPOINTS?.SIGNUP || '/api/auth/signup';
+      const response = await fetch(getApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ 
+          email, 
+          password, 
+          name: name || email.split('@')[0] 
+        }),
       });
-      if (!response.ok) throw new Error('Signup failed');
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Signup failed');
+      }
+      
       await signIn(email, password); // Auto-login after signup
     } catch (error) {
       console.error('Sign up error:', error);

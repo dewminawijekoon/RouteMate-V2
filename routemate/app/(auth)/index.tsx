@@ -18,28 +18,39 @@ import {
   Bus,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
 
 const LoginScreen = () => {
+  const { signIn } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (field: 'email' | 'password', value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.email || !formData.password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    // Handle login logic here
-    console.log('Login attempt:', formData);
-    Alert.alert('Success', 'Logged in successfully!');
-    router.push('../(tabs)/profile');
+
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      await signIn(formData.email, formData.password);
+      // AuthContext will handle navigation to home
+    } catch (error: any) {
+      Alert.alert('Login Failed', error.message || 'Unable to sign in. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const onSwitchToSignUp = () => {
@@ -137,35 +148,15 @@ const LoginScreen = () => {
           </View>
 
           {/* Sign In Button */}
-          <TouchableOpacity style={styles.signInButton} onPress={handleSubmit}>
-            <Text style={styles.signInButtonText}>Sign In</Text>
+          <TouchableOpacity 
+            style={[styles.signInButton, isLoading && styles.signInButtonDisabled]} 
+            onPress={handleSubmit}
+            disabled={isLoading}
+          >
+            <Text style={styles.signInButtonText}>
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </Text>
           </TouchableOpacity>
-
-          {/* Or Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social Login Buttons */}
-          <View style={styles.socialContainer}>
-            <TouchableOpacity 
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('Google')}
-            >
-              <View style={styles.googleIcon} />
-              <Text style={styles.socialButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.socialButton, styles.appleButton]}
-              onPress={() => handleSocialLogin('Apple')}
-            >
-              <View style={styles.appleIcon} />
-              <Text style={[styles.socialButtonText, styles.appleButtonText]}>Continue with Apple</Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* Sign Up Link */}
@@ -178,13 +169,7 @@ const LoginScreen = () => {
           </Text>
         </View>
 
-        {/* Quick Access */}
-        <View style={styles.quickAccessContainer}>
-          <Text style={styles.quickAccessTitle}>✨ Quick Access</Text>
-          <Text style={styles.quickAccessText}>
-            Tap the "Sign In" button to explore RouteMate with demo features!
-          </Text>
-        </View>
+        
       </ScrollView>
     </SafeAreaView>
   );
@@ -325,6 +310,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
+  },
+  signInButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.7,
   },
   signInButtonText: {
     color: '#FFFFFF',

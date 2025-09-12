@@ -11,6 +11,7 @@ import { errorHandler, requestLogger, corsHandler } from './middleware/index.js'
 import { checkDatabaseHealth } from './utils/database.js';
 
 // Import routes
+import authRoutes from './routes/auth.js';
 import chatbotRoutes from './routes/chatbot.js';
 import lostItemsRoutes from './routes/lostItems.js';
 import usersRoutes from './routes/users.js';
@@ -53,6 +54,7 @@ app.get('/health', async (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/chatbot', chatbotRoutes);
 app.use('/lost-items', lostItemsRoutes);
 app.use('/users', usersRoutes);
