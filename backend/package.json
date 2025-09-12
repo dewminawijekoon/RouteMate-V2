@@ -1,0 +1,18 @@
+{
+  "name": "routemate-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "express": "^4.18.2",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
