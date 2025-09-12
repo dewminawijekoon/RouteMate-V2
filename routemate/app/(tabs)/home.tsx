@@ -2,15 +2,17 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { IconSymbol } from '../../components/ui/IconSymbol';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { ThemedText } from '../../components/ThemedText';
-import { ThemedView } from '../../components/ThemedView';
-import { HelloWave } from '../../components/HelloWave';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { HelloWave } from '@/components/HelloWave';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 const TravelerHomeScreen = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
@@ -19,12 +21,12 @@ const TravelerHomeScreen = () => {
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <ThemedText type="title" style={styles.welcomeText}>
-              Welcome back, Ravi
+              {t('welcomeBack', { name: 'Ravi' })}
             </ThemedText>
             <HelloWave />
           </View>
           <ThemedText type="subtitle" style={styles.subtitleText}>
-            Let's start your next journey.
+            {t('startJourney')}
           </ThemedText>
         </View>
 
@@ -37,12 +39,12 @@ const TravelerHomeScreen = () => {
   <ThemedView style={styles.rankCard} lightColor="#B8860B">
         <View style={styles.rankHeader}>
           <View>
-            <ThemedText style={styles.rankLabel}>Traveler Rank</ThemedText>
-            <ThemedText type="title" style={styles.rankTitle}>Bronze</ThemedText>
+            <ThemedText style={styles.rankLabel}>{t('travelerRank')}</ThemedText>
+            <ThemedText type="title" style={styles.rankTitle}>{t('bronze')}</ThemedText>
           </View>
           <View style={styles.pointsContainer}>
             <IconSymbol name={"bell.fill" as any} size={18} color="#FFD700" />
-            <ThemedText style={styles.pointsText}>1,250 pts</ThemedText>
+            <ThemedText style={styles.pointsText}>{t('points', { count: 1250 })}</ThemedText>
           </View>
         </View>
 
@@ -53,11 +55,11 @@ const TravelerHomeScreen = () => {
           </View>
         </View>
 
-        <ThemedText style={styles.progressText}>You're 750 points away from Silver rank!</ThemedText>
+        <ThemedText style={styles.progressText}>{t('pointsAway', { points: '750', rank: 'Silver' })}</ThemedText>
       </ThemedView>
       
             {/* Lost Items */}
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Lost Items</ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>{t('lostItems')}</ThemedText>
             <View style={styles.row}>
               <TouchableOpacity
                 style={[styles.card, { marginRight: 12 }]}
@@ -65,7 +67,7 @@ const TravelerHomeScreen = () => {
                 accessibilityRole="button"
               >
                 <FontAwesome5 name="archive" size={24} color="#1e40af" />
-                <ThemedText style={styles.cardText}>View reported lost items</ThemedText>
+                <ThemedText style={styles.cardText}>{t('viewReportedLostItems')}</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.card}
@@ -73,21 +75,21 @@ const TravelerHomeScreen = () => {
                 accessibilityRole="button"
               >
                 <FontAwesome5 name="plus-square" size={24} color="#dc2626" />
-                <ThemedText style={styles.cardText}>Report a lost item</ThemedText>
+                <ThemedText style={styles.cardText}>{t('reportLostItem')}</ThemedText>
               </TouchableOpacity>
             </View>
 
       {/* Nearest Bus Stop */}
       <View style={styles.section}>
-        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Nearest Bus Stop</ThemedText>
+        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>{t('nearestBusStop')}</ThemedText>
 
         <ThemedView style={styles.busStopCard}>
     <ThemedView style={styles.busIcon} lightColor="#4A90E2">
             <IconSymbol name={"map.fill" as any} size={24} color="white" />
           </ThemedView>
           <View style={styles.busStopInfo}>
-            <ThemedText style={styles.busStopName}>Colombo Fort</ThemedText>
-            <ThemedText style={styles.busStopUpdate}>Updated just now</ThemedText>
+            <ThemedText style={styles.busStopName}>{t('colomboFort')}</ThemedText>
+            <ThemedText style={styles.busStopUpdate}>{t('updatedJustNow')}</ThemedText>
           </View>
           <View style={styles.distanceContainer}>
             <ThemedText style={styles.distance}>500m</ThemedText>
@@ -100,16 +102,16 @@ const TravelerHomeScreen = () => {
 
       {/* Recent Journeys */}
       <View style={styles.section}>
-        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Recent Journeys</ThemedText>
+        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>{t('recentJourneys')}</ThemedText>
 
         <View style={styles.journeysContainer}>
           <ThemedView style={styles.journeyCard}>
-            <ThemedText style={styles.journeyTitle}>Kandy - Colombo</ThemedText>
+            <ThemedText style={styles.journeyTitle}>{t('kandyColombo')}</ThemedText>
             <ThemedText style={styles.journeyRoute}>ND-5874 (Route 01)</ThemedText>
           </ThemedView>
 
           <ThemedView style={styles.journeyCard}>
-            <ThemedText style={styles.journeyTitle}>Galle - Matara</ThemedText>
+            <ThemedText style={styles.journeyTitle}>{t('galleMatara')}</ThemedText>
             <ThemedText style={styles.journeyRoute}>NC-1234 (Route 02)</ThemedText>
           </ThemedView>
         </View>
@@ -118,9 +120,9 @@ const TravelerHomeScreen = () => {
       {/* Notifications */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Notifications</ThemedText>
+          <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>{t('notifications')}</ThemedText>
           <TouchableOpacity>
-            <ThemedText style={styles.seeAllText}>See all</ThemedText>
+            <ThemedText style={styles.seeAllText}>{t('seeAll')}</ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -129,8 +131,8 @@ const TravelerHomeScreen = () => {
             <IconSymbol name={"bell.fill" as any} size={20} color="white" />
           </ThemedView>
           <View style={styles.notificationContent}>
-            <ThemedText style={styles.notificationTitle}>Route 87 Update</ThemedText>
-            <ThemedText style={styles.notificationMessage}>A new schedule has been published.</ThemedText>
+            <ThemedText style={styles.notificationTitle}>{t('route87Update')}</ThemedText>
+            <ThemedText style={styles.notificationMessage}>{t('newSchedulePublished')}</ThemedText>
           </View>
           <ThemedText style={styles.notificationTime}>2h</ThemedText>
         </ThemedView>

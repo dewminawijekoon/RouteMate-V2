@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSocket } from '@/hooks/useSocket';
+import { useTranslation } from 'react-i18next';
 
 type IoniconName = 'bus-outline' | 'briefcase-outline' | 'map-outline';
 
@@ -20,12 +21,57 @@ type NotificationItem = {
 
 export default function NotificationsScreen() {
   const socket = useSocket();
+  const { t, i18n } = useTranslation();
+  const seedIds = new Set(['1', '2', '3', '4', '5', '6']);
+
+  const translateSeed = (id: string) => {
+    switch (id) {
+      case '1':
+        return {
+          type: t('busAlert'),
+          message: t('busArrivingIn', { bus: '255', minutes: 3 }),
+          time: t('minutesAgo', { count: 1 }),
+        };
+      case '2':
+        return {
+          type: t('lostFound'),
+          message: t('lostBagReportedInBus', { bus: 'ND 5368' }),
+          time: t('minutesAgo', { count: 5 }),
+        };
+      case '3':
+        return {
+          type: t('routeUpdate'),
+          message: t('heavyTrafficNear', { place: 'Pettah' }),
+          time: t('minutesAgo', { count: 10 }),
+        };
+      case '4':
+        return {
+          type: t('busAlert'),
+          message: t('busDelayedBy', { bus: '177', minutes: 10 }),
+          time: t('minutesAgo', { count: 30 }),
+        };
+      case '5':
+        return {
+          type: t('routeUpdate'),
+          message: t('newBusRouteAdded', { route: 'Colombo to Kandy' }),
+          time: t('hoursAgo', { count: 1 }),
+        };
+      case '6':
+        return {
+          type: t('lostFound'),
+          message: t('foundWalletInBus', { bus: 'ND 5368' }),
+          time: t('hoursAgo', { count: 2 }),
+        };
+      default:
+        return {} as Partial<NotificationItem>;
+    }
+  };
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: '1',
-      type: 'Bus Alert',
-      message: 'Bus 255 arriving in 3 minutes',
-      time: '1 min ago',
+      type: t('busAlert'),
+      message: t('busArrivingIn', { bus: '255', minutes: 3 }),
+      time: t('minutesAgo', { count: 1 }),
       icon: 'bus-outline',
       color: '#4A90E2',
       bgColor: '#EAF3FF',
@@ -33,9 +79,9 @@ export default function NotificationsScreen() {
     },
     {
       id: '2',
-      type: 'Lost and Found',
-      message: 'Lost bag reported in bus ND 5368',
-      time: '5 mins ago',
+      type: t('lostFound'),
+      message: t('lostBagReportedInBus', { bus: 'ND 5368' }),
+      time: t('minutesAgo', { count: 5 }),
       icon: 'briefcase-outline',
       color: '#F2994A',
       bgColor: '#FFF4E8',
@@ -43,9 +89,9 @@ export default function NotificationsScreen() {
     },
     {
       id: '3',
-      type: 'Route Update',
-      message: 'Heavy traffic near Pettah',
-      time: '10 mins ago',
+      type: t('routeUpdate'),
+      message: t('heavyTrafficNear', { place: 'Pettah' }),
+      time: t('minutesAgo', { count: 10 }),
       icon: 'map-outline',
       color: '#27AE60',
       bgColor: '#E9F9F0',
@@ -53,9 +99,9 @@ export default function NotificationsScreen() {
     },
     {
       id: '4',
-      type: 'Bus Alert',
-      message: 'Bus 177 delayed by 10 minutes',
-      time: '30 mins ago',
+      type: t('busAlert'),
+      message: t('busDelayedBy', { bus: '177', minutes: 10 }),
+      time: t('minutesAgo', { count: 30 }),
       icon: 'bus-outline',
       color: '#4A90E2',
       bgColor: '#EAF3FF',
@@ -63,9 +109,9 @@ export default function NotificationsScreen() {
     },
     {
       id: '5',
-      type: 'Route Update',
-      message: 'New bus route added: Colombo to Kandy',
-      time: '1 hour ago',
+      type: t('routeUpdate'),
+      message: t('newBusRouteAdded', { route: 'Colombo to Kandy' }),
+      time: t('hoursAgo', { count: 1 }),
       icon: 'map-outline',
       color: '#27AE60',
       bgColor: '#E9F9F0',
@@ -73,9 +119,9 @@ export default function NotificationsScreen() {
     },
     {
       id: '6',
-      type: 'Lost and Found',
-      message: 'Found a wallet in bus ND 5368',
-      time: '2 hours ago',
+      type: t('lostFound'),
+      message: t('foundWalletInBus', { bus: 'ND 5368' }),
+      time: t('hoursAgo', { count: 2 }),
       icon: 'briefcase-outline',
       color: '#F2994A',
       bgColor: '#FFF4E8',
@@ -83,54 +129,67 @@ export default function NotificationsScreen() {
     },
   ]);
 
+  // Re-translate seeded items on language change
+  useEffect(() => {
+    setNotifications((prev) =>
+      prev.map((n) =>
+        seedIds.has(n.id)
+          ? { ...n, ...translateSeed(n.id) }
+          : n
+      )
+    );
+  }, [i18n.language, t]);
+
   useEffect(() => {
     if (!socket) return;
     const handler = (payload: { text: string; user: string; ts: number }) => {
       const item: NotificationItem = {
         id: String(payload.ts),
-        type: 'New Post',
+        type: t('newPost'),
         message: `${payload.user}: ${payload.text}`,
-        time: 'Just now',
+        time: t('justNow'),
         icon: 'map-outline',
         color: '#27AE60',
         bgColor: '#E9F9F0',
         read: false,
       };
       setNotifications((prev) => [item, ...prev]);
-      Alert.alert('New Post', `${payload.user} posted: ${payload.text}`);
+      Alert.alert(t('newPost'), `${payload.user} posted: ${payload.text}`);
     };
     socket.on('new-post', handler);
     const lostHandler = (item: any) => {
       const n: NotificationItem = {
         id: String(item.lost_item_id || Date.now()),
-        type: 'Lost Item',
+        type: t('lostItem'),
         message: `${item.item_name || ''}`,
-        time: 'Just now',
+        time: t('justNow'),
         icon: 'briefcase-outline',
         color: '#F2994A',
         bgColor: '#FFF4E8',
         read: false,
       };
       setNotifications((prev) => [n, ...prev]);
-      Alert.alert('Lost & Found', `${item.item_name || ''}`);
+      Alert.alert(t('lostFound'), `${item.item_name || ''}`);
     };
     socket.on('lost-item', lostHandler);
     const pushStatusHandler = (data: any) => {
       const success = data?.success ?? 0;
       const failure = data?.failure ?? 0;
-      const msg = `Push sent: ${success} ok${failure ? `, ${failure} failed` : ''}`;
+      const msg = failure
+        ? t('pushSentOkFailed', { success, failure })
+        : t('pushSentOk', { success });
       const n: NotificationItem = {
         id: `${Date.now()}-push`,
-        type: 'System',
+        type: t('system'),
         message: msg,
-        time: 'Just now',
+        time: t('justNow'),
         icon: 'briefcase-outline',
         color: '#27AE60',
         bgColor: '#E9F9F0',
         read: false,
       };
       setNotifications((prev) => [n, ...prev]);
-      Alert.alert('Notification Status', msg);
+      Alert.alert(t('notificationStatus'), msg);
     };
     socket.on('push-status', pushStatusHandler);
     return () => {
@@ -151,7 +210,7 @@ export default function NotificationsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Ionicons name="menu" size={24} color="#000" />
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>{t('notifications')}</Text>
         <View style={{ width: 24 }} />
       </View>
 

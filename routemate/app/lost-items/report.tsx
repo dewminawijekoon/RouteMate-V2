@@ -12,9 +12,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Picker } from "@react-native-picker/picker";
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useTranslation } from 'react-i18next';
 
 export default function LostItemReport() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [trip, setTrip] = useState("");
   const [category, setCategory] = useState("");
   const [date, setDate] = useState(new Date());
@@ -25,13 +28,10 @@ export default function LostItemReport() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
-          <Text style={styles.description}>
-            Please provide the details of your lost item. We'll do our best to
-            help you find it.
-          </Text>
+          <Text style={styles.description}>{t('lostReportIntro')}</Text>
 
           {/* Select Previous Trip */}
-          <Text style={styles.label}>Select a Previous Trip</Text>
+          <Text style={styles.label}>{t('selectPreviousTrip')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons
               name="directions-bus"
@@ -44,24 +44,24 @@ export default function LostItemReport() {
               onValueChange={(val) => setTrip(val)}
               style={styles.picker}
             >
-              <Picker.Item label="Select from your recent trips" value="" />
+              <Picker.Item label={t('selectFromRecentTrips')} value="" />
               <Picker.Item
-                label="Trip 12345: Route 177 - Kottawa to Kollupitiya (Yesterday)"
+                label={t('tripSample1')}
                 value="trip_12345"
               />
               <Picker.Item
-                label="Trip 67890: Route 138 - Homagama to Pettah (2 days ago)"
+                label={t('tripSample2')}
                 value="trip_67890"
               />
               <Picker.Item
-                label="Trip 54321: Route 122 - Avissawella to Colombo (Last week)"
+                label={t('tripSample3')}
                 value="trip_54321"
               />
             </Picker>
           </View>
 
           {/* Item Name */}
-          <Text style={styles.label}>Item Name</Text>
+          <Text style={styles.label}>{t('itemName')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons
               name="inventory-2"
@@ -70,13 +70,13 @@ export default function LostItemReport() {
               style={styles.icon}
             />
             <TextInput
-              placeholder="e.g., Black backpack"
+              placeholder={t('itemNamePlaceholder')}
               style={styles.input}
             />
           </View>
 
           {/* Category */}
-          <Text style={styles.label}>Category</Text>
+          <Text style={styles.label}>{t('category')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons
               name="category"
@@ -89,17 +89,17 @@ export default function LostItemReport() {
               onValueChange={(val) => setCategory(val)}
               style={styles.picker}
             >
-              <Picker.Item label="Select category" value="" />
-              <Picker.Item label="Electronics" value="electronics" />
-              <Picker.Item label="Bags & Luggage" value="bags" />
-              <Picker.Item label="Personal Items" value="personal" />
-              <Picker.Item label="Documents" value="documents" />
-              <Picker.Item label="Other" value="other" />
+              <Picker.Item label={t('selectCategory')} value="" />
+              <Picker.Item label={t('categoryElectronics')} value="electronics" />
+              <Picker.Item label={t('categoryBags')} value="bags" />
+              <Picker.Item label={t('categoryPersonal')} value="personal" />
+              <Picker.Item label={t('categoryDocuments')} value="documents" />
+              <Picker.Item label={t('categoryOther')} value="other" />
             </Picker>
           </View>
 
           {/* Date of Loss */}
-          <Text style={styles.label}>Date of Loss</Text>
+          <Text style={styles.label}>{t('dateOfLoss')}</Text>
           <TouchableOpacity
             style={styles.inputWrapper}
             onPress={() => setShowDate(true)}
@@ -111,7 +111,7 @@ export default function LostItemReport() {
               style={styles.icon}
             />
             <Text style={styles.input}>
-              {date.toDateString() || "Select date"}
+              {date.toDateString() || t('selectDate')}
             </Text>
           </TouchableOpacity>
           {showDate && (
@@ -129,7 +129,7 @@ export default function LostItemReport() {
           )}
 
           {/* Lost Location */}
-          <Text style={styles.label}>Lost Location (Optional)</Text>
+          <Text style={styles.label}>{t('lostLocationOptional')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons
               name="location-on"
@@ -138,13 +138,13 @@ export default function LostItemReport() {
               style={styles.icon}
             />
             <TextInput
-              placeholder="e.g., Near the front seat"
+              placeholder={t('lostLocationPlaceholder')}
               style={styles.input}
             />
           </View>
 
           {/* Contact Number */}
-          <Text style={styles.label}>Contact Number</Text>
+          <Text style={styles.label}>{t('contactNumber')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons
               name="phone"
@@ -153,7 +153,7 @@ export default function LostItemReport() {
               style={styles.icon}
             />
             <TextInput
-              placeholder="Your contact number"
+              placeholder={t('yourContactNumber')}
               style={styles.input}
               keyboardType="phone-pad"
             />
@@ -161,7 +161,7 @@ export default function LostItemReport() {
 
           {/* Submit */}
           <TouchableOpacity style={styles.submitBtn}>
-            <Text style={styles.submitText}>Submit Report</Text>
+            <Text style={styles.submitText}>{t('submitReport')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

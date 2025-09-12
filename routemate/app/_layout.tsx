@@ -3,26 +3,41 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import * as SplashScreen from 'expo-splash-screen';  // Add this
+import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { initI18n } from '@/src/i18n';
 
-SplashScreen.preventAutoHideAsync();  // Prevent splash from hiding automatically
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
+  const [fontsLoaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
-  const [appIsReady, setAppIsReady] = useState(false);  // Track full readiness
+  const [i18nReady, setI18nReady] = useState(false);
+  const [appIsReady, setAppIsReady] = useState(false);
+
+  // Initialize i18n
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        await initI18n();
+      } finally {
+        if (mounted) setI18nReady(true);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     async function prepare() {
       try {
-        // Wait for fonts + auth (AuthProvider will handle token check)
-        if (loaded) {
+        // Wait for fonts + auth + i18n
+        if (fontsLoaded && i18nReady) {
           // Additional pre-load if needed (e.g., API prefetch for buses)
           await new Promise(resolve => setTimeout(resolve, 1000));  // Min load time for smooth feel
         }
@@ -34,12 +49,12 @@ export default function RootLayout() {
       }
     }
 
-    if (loaded) {
+    if (fontsLoaded && i18nReady) {
       prepare();
     }
-  }, [loaded]);
+  }, [fontsLoaded, i18nReady]);
 
-  if (!appIsReady || !loaded) {
+  if (!appIsReady || !fontsLoaded || !i18nReady) {
     return null;  // Keep splash visible
   }
 

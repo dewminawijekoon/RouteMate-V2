@@ -45,13 +45,13 @@ export default function EndJourneyScreen() {
           text: 'OK',
           onPress: () => {
             // Navigate back to routes tab
-            router.push('/routes');
+            router.push('/routes' as any);
           },
         },
       ]);
     } catch (error) {
       console.log('Error clearing route data:', error);
-      router.push('/routes');
+      router.push('/routes' as any);
     }
   };
 

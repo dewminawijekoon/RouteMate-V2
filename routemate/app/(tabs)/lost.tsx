@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '@/constants/config';
 import { useSocket } from '@/hooks/useSocket';
+import { useTranslation } from 'react-i18next';
 
 type LostItemApi = {
   lost_item_id: number | string;
@@ -30,6 +31,7 @@ type LostItem = {
 
 export default function LostScreen() {
   const socket = useSocket();
+  const { t } = useTranslation();
   const [items, setItems] = useState<LostItem[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -79,7 +81,7 @@ export default function LostScreen() {
 
   async function submit() {
     if (!title.trim()) {
-      Alert.alert('Title required');
+      Alert.alert(t('titleRequired'));
       return;
     }
     try {
@@ -100,12 +102,12 @@ export default function LostScreen() {
         setDescription('');
         setContact('');
         setLocation('');
-        Alert.alert('Posted', 'Lost item reported');
+        Alert.alert(t('posted'), t('lostItemReported'));
       } else {
-        Alert.alert('Error', 'Failed to post');
+        Alert.alert(t('error'), t('failedToPost'));
       }
     } catch (e) {
-      Alert.alert('Error', 'Failed to post');
+      Alert.alert(t('error'), t('failedToPost'));
     }
   }
 
@@ -113,17 +115,17 @@ export default function LostScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <Ionicons name="briefcase-outline" size={24} color="#000" />
-        <Text style={styles.headerTitle}>Lost & Found</Text>
+        <Text style={styles.headerTitle}>{t('lostFound')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <View style={styles.form}>
-        <TextInput style={styles.input} placeholder="Title (required)" value={title} onChangeText={setTitle} />
-        <TextInput style={[styles.input, styles.textArea]} placeholder="Description" value={description} onChangeText={setDescription} multiline />
-        <TextInput style={styles.input} placeholder="Contact (phone/email)" value={contact} onChangeText={setContact} />
-        <TextInput style={styles.input} placeholder="Location (text or 'lat,lng')" value={location} onChangeText={setLocation} />
+        <TextInput style={styles.input} placeholder={t('formTitlePlaceholder')} value={title} onChangeText={setTitle} />
+        <TextInput style={[styles.input, styles.textArea]} placeholder={t('formDescriptionPlaceholder')} value={description} onChangeText={setDescription} multiline />
+        <TextInput style={styles.input} placeholder={t('formContactPlaceholder')} value={contact} onChangeText={setContact} />
+        <TextInput style={styles.input} placeholder={t('formLocationPlaceholder')} value={location} onChangeText={setLocation} />
         <TouchableOpacity style={styles.button} onPress={submit}>
-          <Text style={styles.buttonText}>Post</Text>
+          <Text style={styles.buttonText}>{t('post')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -135,10 +137,10 @@ export default function LostScreen() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.title}>{item.title}</Text>
-              {!!item.bus_no && <Text style={styles.bus}>Bus: {item.bus_no}</Text>}
+              {!!item.bus_no && <Text style={styles.bus}>{t('busPrefix')} {item.bus_no}</Text>}
             </View>
             {!!item.description && <Text style={styles.desc}>{item.description}</Text>}
-            {!!item.contact && <Text style={styles.contact}>Contact: {item.contact}</Text>}
+            {!!item.contact && <Text style={styles.contact}>{t('contactPrefix')} {item.contact}</Text>}
             {!!item.created_at && <Text style={styles.time}>{new Date(item.created_at).toLocaleString()}</Text>}
           </View>
         )}
