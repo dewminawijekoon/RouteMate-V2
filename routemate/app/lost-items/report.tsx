@@ -10,7 +10,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons as Icon } from "@expo/vector-icons";
+import { MaterialIcons } from '@expo/vector-icons';
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTranslation } from 'react-i18next';
@@ -33,7 +33,7 @@ export default function LostItemReport() {
           {/* Select Previous Trip */}
           <Text style={styles.label}>{t('selectPreviousTrip')}</Text>
           <View style={styles.inputWrapper}>
-            <Icon
+            <MaterialIcons
               name="directions-bus"
               size={20}
               color="#9ca3af"
@@ -63,7 +63,7 @@ export default function LostItemReport() {
           {/* Item Name */}
           <Text style={styles.label}>{t('itemName')}</Text>
           <View style={styles.inputWrapper}>
-            <Icon
+            <MaterialIcons
               name="inventory-2"
               size={20}
               color="#9ca3af"
@@ -78,7 +78,7 @@ export default function LostItemReport() {
           {/* Category */}
           <Text style={styles.label}>{t('category')}</Text>
           <View style={styles.inputWrapper}>
-            <Icon
+            <MaterialIcons
               name="category"
               size={20}
               color="#9ca3af"
@@ -104,7 +104,7 @@ export default function LostItemReport() {
             style={styles.inputWrapper}
             onPress={() => setShowDate(true)}
           >
-            <Icon
+            <MaterialIcons
               name="calendar-today"
               size={20}
               color="#9ca3af"
@@ -115,21 +115,23 @@ export default function LostItemReport() {
             </Text>
           </TouchableOpacity>
           {showDate && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display="default"
-              onChange={(event: any, selectedDate: Date | undefined) => {
-                setShowDate(false);
-                if (selectedDate) setDate(selectedDate);
-              }}
-            />
+            <View style={styles.datePickerPlaceholder}>
+              <Text style={styles.datePickerText}>
+                Selected Date: {date.toDateString()}
+              </Text>
+              <TouchableOpacity 
+                onPress={() => setShowDate(false)}
+                style={styles.closeDatePicker}
+              >
+                <Text style={styles.closeDatePickerText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Lost Location */}
           <Text style={styles.label}>{t('lostLocationOptional')}</Text>
           <View style={styles.inputWrapper}>
-            <Icon
+            <MaterialIcons
               name="location-on"
               size={20}
               color="#9ca3af"
@@ -144,7 +146,7 @@ export default function LostItemReport() {
           {/* Contact Number */}
           <Text style={styles.label}>{t('contactNumber')}</Text>
           <View style={styles.inputWrapper}>
-            <Icon
+            <MaterialIcons
               name="phone"
               size={20}
               color="#9ca3af"
@@ -196,6 +198,28 @@ const styles = StyleSheet.create({
   icon: { position: "absolute", left: 12 },
   input: { flex: 1, fontSize: 14, color: "#111827" },
   picker: { flex: 1, height: 48 },
+  datePickerPlaceholder: {
+    backgroundColor: "#f3f4f6",
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 8,
+    alignItems: "center",
+  },
+  datePickerText: {
+    fontSize: 16,
+    color: "#111827",
+    marginBottom: 12,
+  },
+  closeDatePicker: {
+    backgroundColor: "#dc2626",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  closeDatePickerText: {
+    color: "white",
+    fontWeight: "600",
+  },
   submitBtn: {
     marginTop: 24,
     backgroundColor: "#16a34a",
