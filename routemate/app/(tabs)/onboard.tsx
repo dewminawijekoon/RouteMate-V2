@@ -36,7 +36,7 @@ export default function OnBoardScreen() {
   };
 
   const handleEndJourney = () => {
-    router.push('/endjourney');
+    router.push('/endjourney' as any);
   };
 
   return (
