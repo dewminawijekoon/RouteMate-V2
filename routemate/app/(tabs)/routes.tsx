@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import axios from 'axios';
+import { useRouter, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Replace this with your own Google Maps API Key
 const API_KEY = 'AIzaSyChJiEeeJHKaqvXh7MFYNSg0jHfR6MAo2o'; 
-
-const { width, height } = Dimensions.get('window');
 
 export default function RoutesScreen() {
   const [startAddress, setStartAddress] = useState('');
@@ -17,7 +17,29 @@ export default function RoutesScreen() {
   const [steps, setSteps] = useState<any[]>([]);
   const [coordinates, setCoordinates] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false); // Track successful submission
   const mapRef = useRef<MapView | null>(null);
+  const router = useRouter();
+
+  // Clear journey state when returning to routes
+  useFocusEffect(
+    React.useCallback(() => {
+      AsyncStorage.removeItem('journeyStarted');
+    }, [])
+  );
+
+  // Save to AsyncStorage on input change
+  useEffect(() => {
+    const saveRouteDetails = async () => {
+      try {
+        await AsyncStorage.setItem('startLocation', startAddress);
+        await AsyncStorage.setItem('endLocation', endAddress);
+      } catch (error) {
+        console.log('Error saving route details:', error);
+      }
+    };
+    saveRouteDetails();
+  }, [startAddress, endAddress]);
 
   // Function to decode polyline points from Google Maps API
   const decodePolyline = (encoded: string) => {
@@ -53,14 +75,14 @@ export default function RoutesScreen() {
   // Function to get the directions from Google Maps Directions API
   const getDirections = async () => {
     if (!startAddress || !endAddress) {
-      alert('Please enter both start and end locations');
+      Alert.alert('Please enter both start and end locations');
       return;
     }
 
     setLoading(true);
     try {
       const response = await axios.get(
-        `https://maps.googleapis.com/maps/api/directions/json?origin=${startAddress}&destination=${endAddress}&mode=transit&key=${API_KEY}`
+        `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(startAddress)}&destination=${encodeURIComponent(endAddress)}&mode=transit&key=${API_KEY}`
       );
 
       const data = response.data;
@@ -70,7 +92,6 @@ export default function RoutesScreen() {
         setRoute(leg);
         setSteps(leg.steps);
 
-        // Collect coordinates from each step's polyline for more accurate path
         let allCoordinates: { latitude: number; longitude: number }[] = [];
         for (let step of leg.steps) {
           if (step.polyline && step.polyline.points) {
@@ -79,12 +100,32 @@ export default function RoutesScreen() {
           }
         }
         setCoordinates(allCoordinates);
+        setIsSubmitted(true); // Set to true only on successful API response
+
+        // Save start, end, and current time to AsyncStorage
+        await AsyncStorage.setItem('startLocation', startAddress);
+        await AsyncStorage.setItem('endLocation', endAddress);
+        const currentTime = new Date().toLocaleString('en-US', {
+          timeZone: 'Asia/Colombo',
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+        await AsyncStorage.setItem('journeyTime', currentTime);
       } else {
-        alert('Error fetching directions');
+        Alert.alert('Error fetching directions', `Status: ${data.status}. Please check your locations or API key.`);
+        setIsSubmitted(false); // Reset on error
       }
-    } catch (error) {
-      console.error(error);
-      alert('An error occurred while fetching directions');
+    } catch (err: any) {
+      console.error(err);
+      Alert.alert(
+        'Error fetching directions',
+        err.message || 'Network error or invalid API key. Please check your connection and API key restrictions.'
+      );
     }
     setLoading(false);
   };
@@ -112,21 +153,35 @@ export default function RoutesScreen() {
 
   // Function to get formatted step text
   const getStepText = (step: Step, index: number) => {
-    let description = step.html_instructions
-      ? step.html_instructions.replace(/<[^>]+>/g, '') // clean HTML tags
-      : step.instructions || '';
+    let description = step.html_instructions ? step.html_instructions.replace(/<[^>]+>/g, '') : step.instructions || '';
     let duration = step.duration.text;
 
     if (step.travel_mode === 'TRANSIT' && step.transit_details) {
       const line = step.transit_details.line;
-      const lineName = line.short_name || line.name || 'Bus';
+      const lineName = line.short_name ? line.short_name : (line.name || 'Bus');
       const headsign = step.transit_details.headsign || '';
       description = `Take bus ${lineName} towards ${headsign} - ${description}`;
     } else if (step.travel_mode === 'WALKING') {
       description = `Walk - ${description}`;
     }
-
+    
     return `${index + 1}. ${description} (${duration})`;
+  };
+
+  // Handle OnBoard navigation
+  const handleOnBoardPress = async () => {
+    try {
+      // Save route details before navigation
+      await AsyncStorage.setItem('routeSteps', JSON.stringify(steps));
+      await AsyncStorage.setItem('routeCoordinates', JSON.stringify(coordinates));
+      
+      // Navigate to onboard screen using Expo Router
+      router.push('/onboard');
+      console.log('Navigating to OnBoard screen');
+    } catch (error) {
+      console.error('Navigation error:', error);
+      Alert.alert('Navigation Error', 'Unable to navigate to OnBoard screen. Please try again.');
+    }
   };
 
   return (
@@ -161,10 +216,9 @@ export default function RoutesScreen() {
           />
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={getDirections}>
-          <Text style={styles.buttonText}>Find Route</Text>
+        <TouchableOpacity style={styles.button} onPress={getDirections} disabled={loading}>
+          <Text style={styles.buttonText}>{loading ? 'Loading...' : 'Find Route'}</Text>
         </TouchableOpacity>
-
       </View>
 
       {/* Map */}
@@ -183,16 +237,19 @@ export default function RoutesScreen() {
               longitudeDelta: 0.0421,
             }}
           >
-            {/* Render Polyline with detailed route coordinates */}
             {coordinates.length > 0 && (
               <Polyline coordinates={coordinates} strokeColor="#2D6CDF" strokeWidth={4} />
             )}
-
-            {/* Markers for Start and End Locations */}
             {route && (
               <>
-                <Marker coordinate={{ latitude: route.start_location.lat, longitude: route.start_location.lng }} title="Start" />
-                <Marker coordinate={{ latitude: route.end_location.lat, longitude: route.end_location.lng }} title="End" />
+                <Marker 
+                  coordinate={{ latitude: route.start_location.lat, longitude: route.start_location.lng }} 
+                  title="Start" 
+                />
+                <Marker 
+                  coordinate={{ latitude: route.end_location.lat, longitude: route.end_location.lng }} 
+                  title="End" 
+                />
               </>
             )}
           </MapView>
@@ -203,10 +260,20 @@ export default function RoutesScreen() {
       {steps.length > 0 && (
         <View style={styles.stepsContainer}>
           <Text style={styles.stepsHeader}>Bus Steps:</Text>
-          {steps.map((step, index) => (
-            <Text key={index} style={styles.stepText}>{getStepText(step, index)}</Text>
-          ))}
+          {steps
+            .map((step, index) => getStepText(step, index))
+            .filter(step => step !== null && typeof step === 'string')
+            .map((step, index) => (
+              <Text key={index} style={styles.stepText}>{String(step)}</Text>
+            ))}
         </View>
+      )}
+
+      {/* OnBoard Button */}
+      {isSubmitted && steps.length > 0 && (
+        <TouchableOpacity style={styles.onboardButton} onPress={handleOnBoardPress}>
+          <Text style={styles.onboardButtonText}>OnBoard</Text>
+        </TouchableOpacity>
       )}
     </SafeAreaView>
   );
@@ -293,5 +360,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginBottom: 6,
+  },
+  onboardButton: {
+    backgroundColor: '#28a745',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    margin: 16,
+    marginBottom: 20,
+  },
+  onboardButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
