@@ -164,6 +164,7 @@ export default function RoutesScreen() {
         <TouchableOpacity style={styles.button} onPress={getDirections}>
           <Text style={styles.buttonText}>Find Route</Text>
         </TouchableOpacity>
+
       </View>
 
       {/* Map */}

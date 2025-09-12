@@ -16,6 +16,7 @@
     "@googlemaps/js-api-loader": "^1.16.10",
     "@googlemaps/react-wrapper": "^1.2.0",
     "@mapbox/polyline": "^1.2.1",
+    "@react-native-picker/picker": "^2.11.2",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
@@ -28,8 +29,11 @@
     "expo-font": "~13.3.2",
     "expo-haptics": "~14.1.4",
     "expo-image": "~2.4.0",
+    "expo-image-picker": "~16.1.4",
+    "expo-linear-gradient": "~14.1.5",
     "expo-linking": "~7.1.7",
-    "expo-location": "~18.1.6",
+    "expo-location": "^19.0.7",
+    "expo-notifications": "~0.31.4",
     "expo-router": "~5.1.5",
     "expo-secure-store": "~14.2.4",
     "expo-splash-screen": "~0.30.10",
@@ -54,7 +58,8 @@
     "react-native-svg": "15.11.2",
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "~0.20.0",
-    "react-native-webview": "13.13.5"
+    "react-native-webview": "13.13.5",
+    "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

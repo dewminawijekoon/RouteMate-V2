@@ -12,9 +12,9 @@ const TravelModeSelector: React.FC<TravelModeSelectorProps> = ({
   onModeChange,
 }) => {
   const modes = [
-    { key: 'DRIVING' as const, icon: 'car-outline', label: 'Drive' },
-    { key: 'TRANSIT' as const, icon: 'bus-outline', label: 'Transit' },
-    { key: 'WALKING' as const, icon: 'walk-outline', label: 'Walk' },
+    { key: 'DRIVING' as const, icon: 'car-outline' as const, label: 'Drive' },
+    { key: 'TRANSIT' as const, icon: 'bus-outline' as const, label: 'Transit' },
+    { key: 'WALKING' as const, icon: 'walk-outline' as const, label: 'Walk' },
   ];
 
   return (
@@ -31,7 +31,7 @@ const TravelModeSelector: React.FC<TravelModeSelectorProps> = ({
             onPress={() => onModeChange(mode.key)}
           >
             <Ionicons
-              //name={mode.icon}
+              name={mode.icon}
               size={20}
               color={selectedMode === mode.key ? '#fff' : '#666'}
             />
