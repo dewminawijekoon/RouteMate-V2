@@ -1,0 +1,228 @@
+// app/(tabs)/profile.tsx – compact flat design
+import React, { useCallback, useEffect, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, TextInput, StyleSheet, Pressable, Image, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { ThemedText } from '@/components/ThemedText';
+import { API_URL } from '@/constants/config';
+import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
+
+const USER_ID = 1; // TODO: replace with authenticated user id
+
+export default function ProfileScreen() {
+  const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [avatar, setAvatar] = useState('https://i.pravatar.cc/300?img=12');
+  const [loaded, setLoaded] = useState(false);
+
+  const fetchUser = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/users/${USER_ID}`);
+      const data = await res.json();
+      const u = data?.user;
+      if (u) {
+        setName(u.name || '');
+        setEmail(u.email || '');
+        setPhone(u.phone || '');
+        if (u.profile_picture) setAvatar(u.profile_picture);
+      }
+    } catch {}
+    finally { setLoaded(true); }
+  }, []);
+
+  useEffect(() => { fetchUser(); }, [fetchUser]);
+  useFocusEffect(useCallback(() => { fetchUser(); }, [fetchUser]));
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F7FB' }}>
+      {/* Top bar */}
+      <View style={styles.topBar}>
+        <ThemedText type="title" style={styles.topTitle}>Profile</ThemedText>
+        <Pressable style={styles.topAction} onPress={() => setEditing((v) => !v)}>
+          <Ionicons name={editing ? 'close' : 'create-outline'} size={18} color="#0B1220" />
+        </Pressable>
+      </View>
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <View style={styles.container}>
+          {/* Profile card */}
+          <View style={styles.cardRow}>
+            <View style={{ width: 84, height: 84 }}>
+              <Image source={{ uri: avatar }} style={styles.avatar} />
+              <Pressable
+                style={styles.camBadge}
+                onPress={async () => {
+                  try {
+                    if (Platform.OS !== 'web') {
+                      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      if (status !== 'granted') {
+                        Alert.alert('Permission needed', 'Allow access to your photos to change your picture.');
+                        return;
+                      }
+                    }
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      allowsEditing: true,
+                      aspect: [1, 1],
+                      quality: 0.8,
+                    });
+                    if (!result.canceled) {
+                      const uri = result.assets?.[0]?.uri;
+                      if (uri) setAvatar(uri);
+                    }
+                  } catch (e) {
+                    Alert.alert('Error', 'Failed to pick image');
+                  }
+                }}
+                accessibilityLabel="Change profile photo"
+              >
+                <Ionicons name="camera" size={14} color="#fff" />
+              </Pressable>
+            </View>
+            <View style={{ flex: 1 }}>
+              {!editing ? (
+                <>
+                  {loaded ? (
+                    <>
+                      <ThemedText type="title" style={styles.name}>{name || 'User'}</ThemedText>
+                      <ThemedText style={styles.email}>{email || '—'}</ThemedText>
+                      {!!phone && <ThemedText style={styles.phone}>{phone}</ThemedText>}
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.skelName} />
+                      <View style={styles.skelLine} />
+                      <View style={[styles.skelLine, { width: '40%' }]} />
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <TextInput style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
+                  <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+                  <TextInput style={styles.input} placeholder="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+                  <TextInput style={styles.input} placeholder="Avatar URL" value={avatar} onChangeText={setAvatar} autoCapitalize="none" />
+                </>
+              )}
+            </View>
+          </View>
+
+          {editing && (
+            <View style={styles.actions}>
+              <Pressable style={[styles.btn, styles.secondary]} onPress={() => setEditing(false)}>
+                <ThemedText style={[styles.btnText, { color: '#0B1220' }]}>Cancel</ThemedText>
+              </Pressable>
+              <Pressable
+                style={[styles.btn, styles.primary]}
+                onPress={async () => {
+                  try {
+                    setLoading(true);
+                    let pictureUrl = avatar;
+                    // If avatar is a local file/blob, upload it first
+                    if (!/^https?:/i.test(avatar)) {
+                      const form = new FormData();
+                      if (Platform.OS === 'web') {
+                        const blob = await fetch(avatar).then((r) => r.blob());
+                        form.append('file', blob, 'avatar.jpg');
+                      } else {
+                        form.append('file', { uri: avatar, name: 'avatar.jpg', type: 'image/jpeg' } as any);
+                      }
+                      const up = await fetch(`${API_URL}/users/${USER_ID}/avatar`, { method: 'POST', body: form });
+                      const upData = await up.json();
+                      if (upData?.ok && upData?.url) {
+                        pictureUrl = upData.url;
+                        setAvatar(pictureUrl);
+                      }
+                    }
+
+                    const res = await fetch(`${API_URL}/users/${USER_ID}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ name, email, phone, profile_picture: pictureUrl }),
+                    });
+                    const data = await res.json();
+                    if (data?.ok) {
+                      // Re-fetch to ensure we reflect DB state
+                      try {
+                        const fresh = await fetch(`${API_URL}/users/${USER_ID}`).then((r) => r.json());
+                        const u = fresh?.user;
+                        if (u) {
+                          setName(u.name || '');
+                          setEmail(u.email || '');
+                          setPhone(u.phone || '');
+                          if (u.profile_picture) setAvatar(u.profile_picture);
+                        }
+                      } catch {}
+                      Alert.alert('Saved', 'Profile updated');
+                      setEditing(false);
+                    } else {
+                      Alert.alert('Error', 'Failed to update');
+                    }
+                  } catch {}
+                  finally { setLoading(false); }
+                }}
+              >
+                <ThemedText style={[styles.btnText, { color: '#fff' }]}>{loading ? 'Saving…' : 'Save'}</ThemedText>
+              </Pressable>
+            </View>
+          )}
+
+          {/* Quick actions */}
+          <View style={styles.tiles}>
+            <MenuItem icon="settings-outline" label="Preferences" onPress={() => Alert.alert('Preferences')} />
+            <MenuItem icon="headset-outline" label="Customer Care" onPress={() => Alert.alert('Customer Care')} />
+            <MenuItem icon="help-circle-outline" label="Help Center" onPress={() => Alert.alert('Help Center')} />
+            <MenuItem icon="log-out-outline" label="Logout" logout onPress={() => Alert.alert('Logged out')} />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function MenuItem({ icon, label, onPress, logout }: { icon: any; label: string; onPress: () => void; logout?: boolean }) {
+  return (
+    <Pressable style={[styles.menuItem, logout && styles.logoutItem]} onPress={onPress}>
+      <View style={styles.menuIcon}>
+        <Ionicons name={icon} size={18} color={logout ? '#EF4444' : '#0B1220'} />
+      </View>
+      <ThemedText style={styles.menuLabel}>{label}</ThemedText>
+      <Ionicons name="chevron-forward-outline" size={18} color={logout ? '#EF4444' : '#94A3B8'} />
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#F5F7FB' },
+  topTitle: { },
+  topAction: { backgroundColor: '#E2E8F0', padding: 8, borderRadius: 10 },
+
+  container: { padding: 16, gap: 12, flex: 1 },
+
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E6EEF6', shadowColor: '#0F172A', shadowOpacity: 0.05, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
+  avatar: { width: 84, height: 84, borderRadius: 42 },
+  camBadge: { position: 'absolute', right: 0, bottom: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
+  name: { fontWeight: '800', fontSize: 22, marginBottom: 4, color: '#0B1220' },
+  email: { color: '#1F2937' },
+  phone: { color: '#0F172A', marginTop: 2 },
+
+  input: { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginBottom: 8, color: '#0B1220' },
+
+  actions: { flexDirection: 'row', gap: 10 },
+  btn: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 12 },
+  primary: { backgroundColor: '#2563EB' },
+  secondary: { backgroundColor: '#E2E8F0' },
+  btnText: { fontWeight: '700' },
+
+  tiles: { gap: 10 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#E6EEF6' },
+  menuIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E0F2FE', marginRight: 12 },
+  menuLabel: { flex: 1, fontSize: 16, color: '#0B1220' },
+  logoutItem: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FEE2E2' },
+  skelName: { height: 20, width: '60%', backgroundColor: '#E5E7EB', borderRadius: 6, marginBottom: 8 },
+  skelLine: { height: 14, width: '80%', backgroundColor: '#E5E7EB', borderRadius: 6, marginBottom: 6 },
+});
