@@ -172,7 +172,7 @@ export default function LostItemReport() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-  </SafeAreaView>
+    </SafeAreaView>
   );
 }
 
