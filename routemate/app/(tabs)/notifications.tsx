@@ -21,7 +21,51 @@ type NotificationItem = {
 
 export default function NotificationsScreen() {
   const socket = useSocket();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const seedIds = new Set(['1', '2', '3', '4', '5', '6']);
+
+  const translateSeed = (id: string) => {
+    switch (id) {
+      case '1':
+        return {
+          type: t('busAlert'),
+          message: t('busArrivingIn', { bus: '255', minutes: 3 }),
+          time: t('minutesAgo', { count: 1 }),
+        };
+      case '2':
+        return {
+          type: t('lostFound'),
+          message: t('lostBagReportedInBus', { bus: 'ND 5368' }),
+          time: t('minutesAgo', { count: 5 }),
+        };
+      case '3':
+        return {
+          type: t('routeUpdate'),
+          message: t('heavyTrafficNear', { place: 'Pettah' }),
+          time: t('minutesAgo', { count: 10 }),
+        };
+      case '4':
+        return {
+          type: t('busAlert'),
+          message: t('busDelayedBy', { bus: '177', minutes: 10 }),
+          time: t('minutesAgo', { count: 30 }),
+        };
+      case '5':
+        return {
+          type: t('routeUpdate'),
+          message: t('newBusRouteAdded', { route: 'Colombo to Kandy' }),
+          time: t('hoursAgo', { count: 1 }),
+        };
+      case '6':
+        return {
+          type: t('lostFound'),
+          message: t('foundWalletInBus', { bus: 'ND 5368' }),
+          time: t('hoursAgo', { count: 2 }),
+        };
+      default:
+        return {} as Partial<NotificationItem>;
+    }
+  };
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: '1',
@@ -84,6 +128,17 @@ export default function NotificationsScreen() {
       read: false,
     },
   ]);
+
+  // Re-translate seeded items on language change
+  useEffect(() => {
+    setNotifications((prev) =>
+      prev.map((n) =>
+        seedIds.has(n.id)
+          ? { ...n, ...translateSeed(n.id) }
+          : n
+      )
+    );
+  }, [i18n.language, t]);
 
   useEffect(() => {
     if (!socket) return;
