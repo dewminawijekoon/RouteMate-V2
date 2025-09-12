@@ -93,7 +93,7 @@ export default function NotificationsScreen() {
       <View style={styles.header}>
         <Ionicons name="menu" size={24} color="#000" />
         <Text style={styles.headerTitle}>Notifications</Text>
-        <View style={{ width: 24 }} /> {/* placeholder for balance */}
+        <View style={{ width: 24 }} />
       </View>
 
       {/* Notification list */}
@@ -118,10 +118,10 @@ export default function NotificationsScreen() {
               {/* Text Section */}
               <View style={styles.textContainer}>
                 <Text style={[styles.type, { color: notice.color }]}>
-                  {notice.type || ''}
+                  {notice.type}
                 </Text>
-                <Text style={styles.message}>{notice.message || ''}</Text>
-                <Text style={styles.time}>{notice.time || ''}</Text>
+                <Text style={styles.message}>{notice.message}</Text>
+                <Text style={styles.time}>{notice.time}</Text>
               </View>
 
               {/* Status dot (only if unread) */}
