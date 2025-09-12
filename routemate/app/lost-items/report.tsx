@@ -10,9 +10,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from "react-native-vector-icons/MaterialIcons";
-import { Picker } from "@react-native-picker/picker";
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function LostItemReport() {
   const router = useRouter();
@@ -34,37 +32,24 @@ export default function LostItemReport() {
           {/* Select Previous Trip */}
           <Text style={styles.label}>Select a Previous Trip</Text>
           <View style={styles.inputWrapper}>
-            <Icon
+            <MaterialIcons
               name="directions-bus"
               size={20}
               color="#9ca3af"
               style={styles.icon}
             />
-            <Picker
-              selectedValue={trip}
-              onValueChange={(val) => setTrip(val)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Select from your recent trips" value="" />
-              <Picker.Item
-                label="Trip 12345: Route 177 - Kottawa to Kollupitiya (Yesterday)"
-                value="trip_12345"
-              />
-              <Picker.Item
-                label="Trip 67890: Route 138 - Homagama to Pettah (2 days ago)"
-                value="trip_67890"
-              />
-              <Picker.Item
-                label="Trip 54321: Route 122 - Avissawella to Colombo (Last week)"
-                value="trip_54321"
-              />
-            </Picker>
+            <TouchableOpacity style={styles.picker}>
+              <Text style={styles.pickerText}>
+                {trip || "Select from your recent trips"}
+              </Text>
+              <MaterialIcons name="arrow-drop-down" size={20} color="#9ca3af" />
+            </TouchableOpacity>
           </View>
 
           {/* Item Name */}
           <Text style={styles.label}>Item Name</Text>
           <View style={styles.inputWrapper}>
-            <Icon
+            <MaterialIcons
               name="inventory-2"
               size={20}
               color="#9ca3af"
@@ -79,24 +64,18 @@ export default function LostItemReport() {
           {/* Category */}
           <Text style={styles.label}>Category</Text>
           <View style={styles.inputWrapper}>
-            <Icon
+            <MaterialIcons
               name="category"
               size={20}
               color="#9ca3af"
               style={styles.icon}
             />
-            <Picker
-              selectedValue={category}
-              onValueChange={(val) => setCategory(val)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Select category" value="" />
-              <Picker.Item label="Electronics" value="electronics" />
-              <Picker.Item label="Bags & Luggage" value="bags" />
-              <Picker.Item label="Personal Items" value="personal" />
-              <Picker.Item label="Documents" value="documents" />
-              <Picker.Item label="Other" value="other" />
-            </Picker>
+            <TouchableOpacity style={styles.picker}>
+              <Text style={styles.pickerText}>
+                {category || "Select category"}
+              </Text>
+              <MaterialIcons name="arrow-drop-down" size={20} color="#9ca3af" />
+            </TouchableOpacity>
           </View>
 
           {/* Date of Loss */}
@@ -105,7 +84,7 @@ export default function LostItemReport() {
             style={styles.inputWrapper}
             onPress={() => setShowDate(true)}
           >
-            <Icon
+            <MaterialIcons
               name="calendar-today"
               size={20}
               color="#9ca3af"
@@ -116,21 +95,15 @@ export default function LostItemReport() {
             </Text>
           </TouchableOpacity>
           {showDate && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display="default"
-              onChange={(event: any, selectedDate: Date | undefined) => {
-                setShowDate(false);
-                if (selectedDate) setDate(selectedDate);
-              }}
-            />
+            <View style={styles.datePickerContainer}>
+              <Text style={styles.datePickerText}>Date picker functionality would go here</Text>
+            </View>
           )}
 
           {/* Lost Location */}
           <Text style={styles.label}>Lost Location (Optional)</Text>
           <View style={styles.inputWrapper}>
-            <Icon
+            <MaterialIcons
               name="location-on"
               size={20}
               color="#9ca3af"
@@ -145,7 +118,7 @@ export default function LostItemReport() {
           {/* Contact Number */}
           <Text style={styles.label}>Contact Number</Text>
           <View style={styles.inputWrapper}>
-            <Icon
+            <MaterialIcons
               name="phone"
               size={20}
               color="#9ca3af"
@@ -196,7 +169,29 @@ const styles = StyleSheet.create({
   },
   icon: { position: "absolute", left: 12 },
   input: { flex: 1, fontSize: 14, color: "#111827" },
-  picker: { flex: 1, height: 48 },
+  picker: { 
+    flex: 1, 
+    height: 48, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between' 
+  },
+  pickerText: {
+    fontSize: 14,
+    color: "#111827",
+    flex: 1,
+  },
+  datePickerContainer: {
+    padding: 16,
+    backgroundColor: "#f3f4f6",
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  datePickerText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+  },
   submitBtn: {
     marginTop: 24,
     backgroundColor: "#16a34a",

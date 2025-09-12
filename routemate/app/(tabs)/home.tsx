@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { HelloWave } from '@/components/HelloWave';
